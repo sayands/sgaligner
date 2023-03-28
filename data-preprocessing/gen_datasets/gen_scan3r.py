@@ -88,6 +88,7 @@ class SubGenScan3R(Dataset):
         return self.scan_ids.shape[0]
 
     def calculate_overlap(self):
+        
         self.logger.info('[INFO] Calculating Overlap on Generated subscans...')
         
         anchor_file_name = osp.join(self.file_out_dir , 'anchors_{}.json'.format(self.split))
@@ -114,10 +115,15 @@ class SubGenScan3R(Dataset):
 
                 if overlap_ratio >= 0.1 and overlap_ratio <= 0.9:
                     anchor_obj_ids = np.unique(src_ply_data['objectId'][common_pts_idx_src])
-                    overlap_data.append({'src' : subscan_ids[subscan_pair[0]], 'tgt' : subscan_pair[subscan_pair[1]], 
+                    overlap_data.append({'src' : subscan_ids[subscan_pair[0]], 'ref' : subscan_pair[subscan_pair[1]], 
                             'overlap' : overlap_ratio, 'anchorIds' : anchor_obj_ids.tolist()})
         
         common.write_json(overlap_data, anchor_file_name)
+
+    def write_metadata(self):
+        self.logger.info('[INFO] Writing Relationships + Objects Data...')
+        common.write_json(self.subscene_rels, osp.join(self.file_out_dir, 'relationships_subscenes_{}.json'.format(self.split)))
+        common.write_json(self.subscene_objs, osp.join(self.file_out_dir,'objects_subscenes_{}.json'.format(self.split)))
 
     def __getitem__(self, data):
         idx = data[0]

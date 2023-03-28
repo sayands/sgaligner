@@ -34,18 +34,17 @@ if __name__ == '__main__':
             idx = list(sub_gen_scan3r.scan_ids).index(scan_id)
         else:
             idx = list(sub_gen_scan3r.scan_ids).index(scan_id)
-        print('[INFO] Running Subscan Generation (Only Visualisation) on {}'.format(scan_id))
+        sub_gen_scan3r.logger.info('[INFO] Running Subscan Generation (Only Visualisation) on {}'.format(scan_id))
         sub_gen_scan3r[idx, args.visualise]
-    
     
     else: 
         '''Running subscan generation on data split'''
         sub_gen_scan3r = SubGenScan3R(cfg, split=args.split)
-        print('[INFO] Running Subscan Generation for {} scans...'.format(args.split))
+        sub_gen_scan3r.logger.info('[INFO] Running Subscan Generation for {} scans...'.format(args.split))
         for idx in tqdm(range(len(sub_gen_scan3r))):
             sub_gen_scan3r[idx, False]
         
+        sub_gen_scan3r.write_metadata()
         sub_gen_scan3r.calculate_overlap()
     
-
 

@@ -16,6 +16,9 @@ _C.data_dir = define.SCAN3R_ORIG_DIR
 _C.label_file_name = define.LABEL_FILE_NAME_GT
 _C.predicted_sg = False
 
+# preprocess params
+_C.preprocess.pc_resolutions = [32, 64, 128, 256, 512]
+
 # Data params
 _C.data = edict()
 _C.data.subscenes_per_scene = 7
