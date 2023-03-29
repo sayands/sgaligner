@@ -17,18 +17,34 @@ _C.label_file_name = define.LABEL_FILE_NAME_GT
 _C.predicted_sg = False
 
 # preprocess params
-_C.preprocess.pc_resolutions = [32, 64, 128, 256, 512]
+_C.preprocess = edict()
+_C.preprocess.pc_resolutions = [512] # [32, 64, 128, 256, 512]
 
 # Data params
 _C.data = edict()
 _C.data.subscenes_per_scene = 7
 _C.data.filter_segment_size = 512
 _C.data.min_obj_points = 50
-_C.data.pc_resolution = 512
+_C.data.name = '3RScan'
+
+# Training params
+_C.train = edict()
+_C.train.batch_size = 4
+_C.train.num_workers = 4
+_C.train.pc_res = 512
+_C.train.use_augmentation = True
+_C.train.rot_factor = 1.0
+_C.train.augmentation_noise = 0.005
+_C.train.modules = ['gat', 'point', 'rel', 'attr']
+_C.train.end_epoch = 50
+_C.train.learning_rate = 1e-3
+
+# Validation params
+_C.val = edict()
+_C.val.data_mode = 'orig'
 
 # model param
 _C.model = edict()
-_C.model.learning_rate = 1e-3
 _C.model.rel_dim = 41
 _C.model.attr_dim = 164
 _C.model.zoom = 0.1

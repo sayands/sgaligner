@@ -14,6 +14,7 @@ from utils import common, point_cloud, scan3r, open3d, visualisation
 from utils.logger import colorlogger
 
 class SubGenScan3R(Dataset):
+    ''' Subset Generation from 3RScan dataset '''
     def __init__(self, cfg, split='train'):
         self.predicted = cfg.predicted_sg
         self.scene_dir = osp.join(cfg.data_dir, 'scenes')
@@ -39,12 +40,13 @@ class SubGenScan3R(Dataset):
         self.scan_objs = common.load_json(osp.join(self.file_dir, 'objects.json'))['scans']
 
         self.label_file_name = cfg.label_file_name
+        self.num_subscans_per_scan = cfg.data.subscenes_per_scene
         self.subscene_rels = {'scans' : []}
         self.subscene_objs = {'scans' : []}
 
         self.obj_pt_scene_thresh = cfg.data.min_obj_points
         self.logger.info('[INFO] Loaded {} {} scan data...'.format(self.__len__(), self.split))
-        self.start_time = time.time()
+        
 
     def gen_scene_graph(self, scan_id, idx, ply_data, visible_pts_mask):
         obj_json_scan = [scan_obj for scan_obj in self.scan_objs if scan_obj['scan'] == scan_id][0]['objects']
@@ -88,10 +90,9 @@ class SubGenScan3R(Dataset):
         return self.scan_ids.shape[0]
 
     def calculate_overlap(self):
-        
         self.logger.info('[INFO] Calculating Overlap on Generated subscans...')
         
-        anchor_file_name = osp.join(self.file_out_dir , 'anchors_{}.json'.format(self.split))
+        anchor_file_name = osp.join(self.file_out_dir , 'anchors_{}_all.json'.format(self.split))
         all_subscan_ids = os.listdir(self.scene_out_dir)
         overlap_data = []
 
@@ -124,7 +125,40 @@ class SubGenScan3R(Dataset):
         self.logger.info('[INFO] Writing Relationships + Objects Data...')
         common.write_json(self.subscene_rels, osp.join(self.file_out_dir, 'relationships_subscenes_{}.json'.format(self.split)))
         common.write_json(self.subscene_objs, osp.join(self.file_out_dir,'objects_subscenes_{}.json'.format(self.split)))
+        
+        self.logger.info('[INFO] Choosing a (realistic) subset of subscenes generated...')
+        all_subscan_ids = os.listdir(self.scene_out_dir)
 
+        self.logger.info('[INFO] Displaying information for {} split...'.format(self.split))
+        self.logger.info('[INFO] Total 3RScan scenes : {}'.format(self.scan_ids.shape[0]))
+        self.logger.info('[INFO] Total generated subscenes : {}'.format(all_subscan_ids.shape[0]))
+
+        subscan_ids = []
+        for scan_id in self.scan_ids:
+            subscan_ids_scan = [subscan_id for subscan_id in all_subscan_ids if subscan_id.startswith(scan_id)]
+            if len(subscan_ids_scan) == 0: continue
+
+            if len(subscan_ids_scan) > self.num_subscans_per_scan:
+                subscan_ids_scan = np.random.choice(subscan_ids_scan, self.num_subscans_per_scan)
+            
+            subscan_ids.append(subscan_ids_scan)
+        
+        subscan_ids = np.concatenate(subscan_ids)
+        self.logger.info('[INFO] Chosen subscenes : {}'.format(subscan_ids.shape[0]))
+
+        anchor_data_dumped = common.load_json(osp.join(self.file_out_dir, 'anchors_{}_all.json'.format(self.split)))
+        self.logger.info('[INFO] Total generated no.of pairs - {}'.format(len(anchor_data_dumped)))
+
+        anchor_data = []
+        for anchor_data_idx in anchor_data_dumped:
+            if anchor_data_idx['src'] in subscan_ids and anchor_data_idx['ref'] in subscan_ids:
+                anchor_data.append(anchor_data_idx)
+        
+        self.logger.info('[INFO] Chosen no.of pairs - {}'.format(len(anchor_data)))
+
+        np.savetxt(osp.join(self.file_out_dir, '{}_scans_subscenes.txt'.format(self.split)), subscan_ids, fmt='%s')
+        common.write_json(anchor_data, osp.join(self.file_out_dir, 'anchors_{}.json'.format(self.split)))
+    
     def __getitem__(self, data):
         idx = data[0]
         visualise =  data[1]

@@ -10,8 +10,8 @@ from gen_datasets.gen_scan3r import SubGenScan3R
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--predicted', dest='predicted_sg', action='store_true', default=False, help='run subscan generation with predicted scene graphs')
-    parser.add_argument('--visualise', dest='visualise', action='store_true', help='dump visualisation of subscenes')
-    parser.add_argument('--scan_id', dest='scan_id', default='', type=str, help='3RScan scan Id to run subscan generation on')
+    parser.add_argument('--visualise', dest='visualise', action='store_true', help='visualisation of subscene generation - camera trajectory')
+    parser.add_argument('--scan_id', dest='scan_id', default='', type=str, help='3RScan scan Id to run subscan generation (only visualisation) on')
     parser.add_argument('--split', dest='split', default='train', type=str, help='split to run subscan generation on')
 
     args = parser.parse_args()
@@ -44,7 +44,7 @@ if __name__ == '__main__':
         for idx in tqdm(range(len(sub_gen_scan3r))):
             sub_gen_scan3r[idx, False]
         
-        sub_gen_scan3r.write_metadata()
         sub_gen_scan3r.calculate_overlap()
+        sub_gen_scan3r.write_metadata()
     
 

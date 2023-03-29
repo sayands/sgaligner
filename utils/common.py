@@ -7,6 +7,9 @@ def ensure_dir(path):
     if not osp.exists(path):
         os.makedirs(path)
 
+def assert_dir(path):
+    assert osp.exists(path)
+
 def load_pkl_data(filename):
     with open(filename, 'rb') as handle:
         data_dict = pickle.load(handle)

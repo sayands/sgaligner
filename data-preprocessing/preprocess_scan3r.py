@@ -4,15 +4,22 @@ from tqdm import tqdm
 import numpy as np 
 from scipy.spatial import ConvexHull
 import argparse
+from collections import OrderedDict
+from operator import getitem
 
 import sys
 sys.path.append('.')
 
-from utils import define, common, point_cloud, scan3r, label_mapping
+from utils import define, common, point_cloud, label_mapping, visualisation
 from configs import config_scan3r_gt, config_scan3r_pred
 
-CLASS2IDX_SCAN3R = label_mapping.get_class_2_idx(osp.join(define.SCAN3R_ORIG_DIR, 'files/classes.txt'))
-REL2IDX_SCAN3R = label_mapping.get_class_2_idx(osp.join(define.SCAN3R_ORIG_DIR, 'files/relationships.txt'))
+CLASS2IDX_SCAN3R = label_mapping.class_2_idx_scan3r(define.SCAN3R_ORIG_DIR)
+REL2IDX_SCAN3R = label_mapping.rel_2_idx_scan3r(define.SCAN3R_ORIG_DIR)
+
+points_count_per_label = dict()
+for class_name in CLASS2IDX_SCAN3R.keys():
+    points_count_per_label[class_name] = []
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -37,6 +44,8 @@ def parse_args():
         args.mode = 'node_semantic_changed'
     if args.change_edge_semantic:
         args.mode = 'edge_semantic_changed'
+    else:
+        args.mode = 'orig'
 
     return args, cfg
 
@@ -73,7 +82,7 @@ def process_scan(rel_data, obj_data, args, cfg):
 
         for idx, object in enumerate(object_data):
             orig_objects_ids.append(int(object['id'])) 
-        
+    
     for idx, object in enumerate(object_data):
         attribute = [item for sublist in object['attributes'].values() for item in sublist]
 
@@ -86,8 +95,9 @@ def process_scan(rel_data, obj_data, args, cfg):
                 object_id_for_pcl = np.random.choice(orig_objects_ids)
         
         global_object_id = int(object['global_id'])
-        obj_pt_idx = np.where(ply_data['objectId'] == global_object_id)
+        obj_pt_idx = np.where(ply_data['objectId'] == object_id)
         obj_pcl = points[obj_pt_idx]
+
 
         if obj_pcl.shape[0] < cfg.data.min_obj_points: continue
         
@@ -97,6 +107,7 @@ def process_scan(rel_data, obj_data, args, cfg):
         cz = np.mean(hull.points[hull.vertices,2])
 
         for pc_resolution in object_points.keys():
+            if obj_pcl.shape[0] < 512: points_count_per_label[object['label']].append(obj_pcl.shape[0])
             obj_pcl = point_cloud.pcl_farthest_sample(obj_pcl, pc_resolution)
             object_points[pc_resolution].append(obj_pcl)
         
@@ -187,24 +198,23 @@ def process_scan(rel_data, obj_data, args, cfg):
         o[index] = object_id2idx[v]  # o_idx
     edges = np.stack((s, o), axis=1) 
 
-    dataDict = {}
-    dataDict['scan_id'] = scan_id
-    dataDict['objects_id'] = np.array(objects_ids)
-    dataDict['global_objects_id'] = np.array(global_objects_ids)
-    dataDict['objects_cat'] = np.array(objects_cat)
-    dataDict['triples'] = triples
-    dataDict['pairs'] = pairs
-    dataDict['edges'] = edges
-    dataDict['obj_points'] = object_points
-    dataDict['objects_count'] = len(objects_ids)
-    dataDict['edges_count'] = len(edges)
-    dataDict['object_id2idx'] = object_id2idx
-    dataDict['object_attributes'] = objects_attributes
-    dataDict['edges_cat'] = edges_cat
-    dataDict['rel_trans'] = rel_trans
-    dataDict['root_obj_id'] = root_obj_id
-
-    return dataDict
+    data_dict = {}
+    data_dict['scan_id'] = scan_id
+    data_dict['objects_id'] = np.array(objects_ids)
+    data_dict['global_objects_id'] = np.array(global_objects_ids)
+    data_dict['objects_cat'] = np.array(objects_cat)
+    data_dict['triples'] = triples
+    data_dict['pairs'] = pairs
+    data_dict['edges'] = edges
+    data_dict['obj_points'] = object_points
+    data_dict['objects_count'] = len(objects_ids)
+    data_dict['edges_count'] = len(edges)
+    data_dict['object_id2idx'] = object_id2idx
+    data_dict['object_attributes'] = objects_attributes
+    data_dict['edges_cat'] = edges_cat
+    data_dict['rel_trans'] = rel_trans
+    data_dict['root_obj_id'] = root_obj_id
+    return data_dict
 
 def process_data(args, cfg):
     mode = args.mode
@@ -216,20 +226,47 @@ def process_data(args, cfg):
     rel_json = common.load_json(osp.join(data_dir, 'files', 'relationships_subscenes_{}.json'.format(split)))['scans']
     obj_json = common.load_json(osp.join(data_dir, 'files', 'objects_subscenes_{}.json'.format(split)))['scans']
 
-    subscan_ids_generated = np.genfromtxt(osp.join(data_dir, 'files', '{}_scans_subscenes.txt'.format(split)), dtype=str)    
+    subscan_ids_generated = np.genfromtxt(osp.join(data_dir, 'files', '{}_scans_subscenes.txt'.format(split)), dtype=str)  
     subscan_ids_processed = []
+
+    total_instance_cnt = 0
 
     for subscan_id in tqdm(subscan_ids_generated):
         obj_data = [obj_data for obj_data in obj_json if obj_data['scan'] == subscan_id][0]
         rel_data = [rel_data for rel_data in rel_json if rel_data['scan'] == subscan_id][0]
-        data_dict = process_scan(rel_data, obj_data, split, mode)
+        data_dict = process_scan(rel_data, obj_data, args, cfg)
         
         if type(data_dict) == int: continue
+        total_instance_cnt += data_dict['objects_count']
         subscan_ids_processed.append(subscan_id)
         
-        common.write_pkl_data(data_dict, osp.join(data_write_dir, data_dict['scan_id'] + '.pkl'))
+        # common.write_pkl_data(data_dict, osp.join(data_write_dir, data_dict['scan_id'] + '.pkl'))
     
-    subscan_ids = np.array(subscan_ids) 
+    point_counts = dict()
+    instance_cnt_less_512 = 0
+    for class_name in points_count_per_label.keys():
+        if len(points_count_per_label[class_name]) > 0: 
+            instance_cnt_less_512 += len(points_count_per_label[class_name])
+            point_counts[class_name] = np.array(points_count_per_label[class_name]).mean()
+            point_counts[class_name]  = {'count' : round(point_counts[class_name], 3), 'id' : CLASS2IDX_SCAN3R[class_name]}
+            point_counts[class_name]['diff_512'] = 512 - point_counts[class_name]['count']
+    
+    perc_instance_cnt_less_512 = (instance_cnt_less_512 / total_instance_cnt) * 100.0
+    print('Total number of instances : {}'.format(total_instance_cnt))
+    print('Total instance counts with object points < 512 points: {}'.format(instance_cnt_less_512))
+    print('Percentage of object instances with less than 512 points : {}'.format(round(perc_instance_cnt_less_512, 3)))
+
+    sorted_counts_dict = OrderedDict(sorted(point_counts.items(), key = lambda x: getitem(x[1], 'count'), reverse=True)) 
+    topkcounts = {k : sorted_counts_dict[k]['count']  for k in list(sorted_counts_dict)[:20]}
+    visualisation.visualise_dict_counts(topkcounts, title = 'Instance Classes with Points Less Than 512')
+
+    topkcounts = {k : sorted_counts_dict[k]['diff_512']  for k in list(sorted_counts_dict)[:20]}
+    visualisation.visualise_dict_counts(topkcounts, title = 'Instance Classes with How Many Points Less Than 512')
+
+    assert False
+    
+
+    subscan_ids = np.array(subscan_ids_processed) 
     print('[INFO] Updating Overlap Data..')
     anchor_data_filename = osp.join(data_dir, 'files', 'anchors_{}.json'.format(split))
     raw_anchor_data = common.load_json(anchor_data_filename)
@@ -239,13 +276,14 @@ def process_data(args, cfg):
             continue
         anchor_data.append(anchor_data_idx)
     
-    common.write_json(anchor_data, osp.join(data_write_dir, 'anchors_{}.json'.format(split)))
+    # common.write_json(anchor_data, osp.join(data_write_dir, 'anchors_{}.json'.format(split)))
 
     print('[INFO] Saving {} scan ids...'.format(split))
-    np.savetxt(osp.join(data_write_dir, '{}_scans_subscenes.txt'.format(split)), subscan_ids, fmt='%s')
+    # np.savetxt(osp.join(data_write_dir, '{}_scans_subscenes.txt'.format(split)), subscan_ids, fmt='%s')
 
 if __name__ == '__main__':
     args, cfg = parse_args()
     print('======== Scan3R Subscan preprocessing with {} Scene Graphs ========'.format('GT' if not cfg.predicted_sg else 'Predicted'))
+    process_data(args, cfg)
 
 
