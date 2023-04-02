@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from networks.gat import MultiGAT
-from networks.pointnet import PointNetfeat
+from aligner.networks.gat import MultiGAT
+from aligner.networks.pointnet import PointNetfeat
 
 class ProjectionHead(nn.Module):
     def __init__(self, in_dim, hidden_dim, out_dim, dropout):
@@ -48,18 +48,18 @@ class MultiModalEncoder(nn.Module):
         self.dropout = dropout
         self.attn_dropout = attn_dropout
         self.instance_norm = instance_norm
-        self.inner_view_num = len(self.train_modules) # loss GAT, loss relEnc, loss attrEnc, loss ptEnc
+        self.inner_view_num = len(self.modules) # Point Net + Structure Encoder + Meta Encoder
 
         self.meta_embedding_rel = nn.Linear(self.rel_dim, self.emb_dim)
         self.meta_embedding_attr = nn.Linear(self.attr_dim, self.emb_dim)
         
-        self.object_encoder = PointNetfeat(global_feat=True, batch_norm=True, point_size=3, input_transform=False, feature_transform=False, out_size=self.ptEncOutDim)
+        self.object_encoder = PointNetfeat(global_feat=True, batch_norm=True, point_size=3, input_transform=False, feature_transform=False, out_size=self.pt_out_dim)
         self.object_embedding = nn.Linear(self.pt_out_dim, self.emb_dim)
         
-        self.structure_encoder = MultiGAT(nUnits=self.hidden_units, nHeads=self.heads, dropout=self.dropout)
+        self.structure_encoder = MultiGAT(n_units=self.hidden_units, n_heads=self.heads, dropout=self.dropout)
         self.structure_embedding = nn.Linear(256, self.emb_dim)
         
-        self.fusion = MultiModalFusion(modalNum=self.innerViewNum, withWeight=1)
+        self.fusion = MultiModalFusion(modal_num=self.inner_view_num, with_weight=1)
         
     def forward(self, data_dict):
         tot_object_points = data_dict['tot_obj_pts'].permute(0, 2, 1)

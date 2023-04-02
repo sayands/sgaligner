@@ -1,4 +1,7 @@
-*/__pycache__
+__pycache__/
+*.pyc
 .DS_store
 .vscode
 plots/
+output/
+check.py

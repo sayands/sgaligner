@@ -33,7 +33,6 @@ class CustomMultiLossLayer(nn.Module):
             loss += precision[i] * loss_list[i] + self.log_vars[i]
         return loss
 
-
 class ICLLoss(nn.Module):
     def __init__(self, device, temperature=0.05, alpha = 0.5):
         super(ICLLoss, self).__init__()
@@ -97,3 +96,47 @@ class IALLoss(nn.Module):
 
         loss = self.zoom * (self.alpha * loss_a + (1-self.alpha) * loss_b)
         return loss
+
+
+class OverallLoss(nn.Module):
+    def __init__(self, ial_loss_layer, icl_loss_layer, device, metadata):
+        super(OverallLoss, self).__init__()
+        
+        self.zoom = metadata['zoom']
+        self.device = device
+        self.modules = metadata['modules']
+        self.weight_align_loss = metadata['wt_align_loss']
+        self.weight_contrastive_loss = metadata['wt_contrastive_loss']
+
+        self.align_loss = IALLoss(device)
+        self.contrastive_loss = ICLLoss(self.device)
+        self.align_multi_loss_layer = ial_loss_layer
+        self.contrastive_multi_loss_layer = icl_loss_layer
+
+    def forward(self, output_dict, data_dict):
+        # alignment loss
+        if len(self.modules) > 1:
+            align_losses = []
+            for module in self.modules:
+                loss = self.align_loss(output_dict[module], output_dict['joint'], data_dict)
+                align_losses.append(loss)
+            
+            total_align_loss = self.align_multi_loss_layer(align_losses) * self.zoom
+        
+        # contrastive loss 
+        constrastive_losses = []
+        for module in self.modules:
+            loss = self.contrastive_loss(output_dict[module], data_dict)
+            constrastive_losses.append(loss)
+        
+        if len(self.modules) > 1:
+            total_constrastive_loss = self.contrastive_multi_loss_layer(constrastive_losses)
+        else:
+            total_constrastive_loss = constrastive_losses[0]
+        
+        loss = self.weight_align_loss * total_align_loss + self.weight_contrastive_loss * total_constrastive_loss
+        return {
+            'loss': loss,
+            'icl_loss': total_constrastive_loss,
+            'ial_loss': total_align_loss,
+        }

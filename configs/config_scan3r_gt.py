@@ -4,6 +4,7 @@ import argparse
 from easydict import EasyDict as edict
 
 from utils import define
+from utils.common import ensure_dir
 
 _C = edict()
 
@@ -15,6 +16,19 @@ _C.num_workers = 4
 _C.data_dir = define.SCAN3R_ORIG_DIR
 _C.label_file_name = define.LABEL_FILE_NAME_GT
 _C.predicted_sg = False
+_C.modules = ['gat', 'point', 'rel', 'attr']
+_C.working_dir = osp.dirname(osp.abspath(__file__))
+_C.root_dir = osp.dirname(_C.working_dir)
+_C.exp_name = '_'.join(_C.modules)
+_C.output_dir = osp.join(_C.root_dir, 'output', _C.exp_name)
+_C.snapshot_dir = osp.join(_C.output_dir, 'snapshots')
+_C.log_dir = osp.join(_C.output_dir, 'logs')
+_C.event_dir = osp.join(_C.output_dir, 'events')
+
+ensure_dir(_C.output_dir)
+ensure_dir(_C.snapshot_dir)
+ensure_dir(_C.log_dir)
+ensure_dir(_C.event_dir)
 
 # preprocess params
 _C.preprocess = edict()
@@ -30,25 +44,39 @@ _C.data.name = '3RScan'
 # Training params
 _C.train = edict()
 _C.train.batch_size = 4
-_C.train.num_workers = 4
 _C.train.pc_res = 512
 _C.train.use_augmentation = True
 _C.train.rot_factor = 1.0
 _C.train.augmentation_noise = 0.005
-_C.train.modules = ['gat', 'point', 'rel', 'attr']
 _C.train.end_epoch = 50
 _C.train.learning_rate = 1e-3
 
 # Validation params
 _C.val = edict()
 _C.val.data_mode = 'orig'
+_C.val.batch_size = 4
+_C.val.pc_res = 512
 
 # model param
 _C.model = edict()
 _C.model.rel_dim = 41
 _C.model.attr_dim = 164
-_C.model.zoom = 0.1
 _C.model.alignment_thresh = 0.4
+
+# optim
+_C.optim = edict()
+_C.optim.lr = 1e-4
+_C.optim.lr_decay = 0.95
+_C.optim.lr_decay_steps = 1
+_C.optim.weight_decay = 1e-6
+_C.optim.max_epoch = 40
+_C.optim.grad_acc_steps = 1
+
+# loss
+_C.loss = edict()
+_C.loss.alignment_loss_weight = 0.5
+_C.loss.constrastive_loss_weight = 0.5
+_C.loss.zoom = 0.1
 
 # registration model params
 _C.reg_model = edict()

@@ -16,11 +16,6 @@ from configs import config_scan3r_gt, config_scan3r_pred
 CLASS2IDX_SCAN3R = label_mapping.class_2_idx_scan3r(define.SCAN3R_ORIG_DIR)
 REL2IDX_SCAN3R = label_mapping.rel_2_idx_scan3r(define.SCAN3R_ORIG_DIR)
 
-points_count_per_label = dict()
-for class_name in CLASS2IDX_SCAN3R.keys():
-    points_count_per_label[class_name] = []
-
-
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--predicted', dest='predicted_sg', action='store_true', default=False, help='run subscan generation with predicted scene graphs')
@@ -107,7 +102,6 @@ def process_scan(rel_data, obj_data, args, cfg):
         cz = np.mean(hull.points[hull.vertices,2])
 
         for pc_resolution in object_points.keys():
-            if obj_pcl.shape[0] < 512: points_count_per_label[object['label']].append(obj_pcl.shape[0])
             obj_pcl = point_cloud.pcl_farthest_sample(obj_pcl, pc_resolution)
             object_points[pc_resolution].append(obj_pcl)
         
@@ -221,7 +215,9 @@ def process_data(args, cfg):
     data_dir = osp.join(cfg.data_dir, 'out')
     data_write_dir = osp.join(data_dir, 'files', mode)
     common.ensure_dir(data_write_dir)
+    common.ensure_dir(osp.join(data_write_dir, 'data'))
     split = args.split
+    print('[INFO] Processing subscans from {} split'.format(split))
 
     rel_json = common.load_json(osp.join(data_dir, 'files', 'relationships_subscenes_{}.json'.format(split)))['scans']
     obj_json = common.load_json(osp.join(data_dir, 'files', 'objects_subscenes_{}.json'.format(split)))['scans']
@@ -229,43 +225,16 @@ def process_data(args, cfg):
     subscan_ids_generated = np.genfromtxt(osp.join(data_dir, 'files', '{}_scans_subscenes.txt'.format(split)), dtype=str)  
     subscan_ids_processed = []
 
-    total_instance_cnt = 0
-
     for subscan_id in tqdm(subscan_ids_generated):
         obj_data = [obj_data for obj_data in obj_json if obj_data['scan'] == subscan_id][0]
         rel_data = [rel_data for rel_data in rel_json if rel_data['scan'] == subscan_id][0]
         data_dict = process_scan(rel_data, obj_data, args, cfg)
         
         if type(data_dict) == int: continue
-        total_instance_cnt += data_dict['objects_count']
+
         subscan_ids_processed.append(subscan_id)
-        
-        # common.write_pkl_data(data_dict, osp.join(data_write_dir, data_dict['scan_id'] + '.pkl'))
+        common.write_pkl_data(data_dict, osp.join(data_write_dir, 'data', data_dict['scan_id'] + '.pkl'))
     
-    point_counts = dict()
-    instance_cnt_less_512 = 0
-    for class_name in points_count_per_label.keys():
-        if len(points_count_per_label[class_name]) > 0: 
-            instance_cnt_less_512 += len(points_count_per_label[class_name])
-            point_counts[class_name] = np.array(points_count_per_label[class_name]).mean()
-            point_counts[class_name]  = {'count' : round(point_counts[class_name], 3), 'id' : CLASS2IDX_SCAN3R[class_name]}
-            point_counts[class_name]['diff_512'] = 512 - point_counts[class_name]['count']
-    
-    perc_instance_cnt_less_512 = (instance_cnt_less_512 / total_instance_cnt) * 100.0
-    print('Total number of instances : {}'.format(total_instance_cnt))
-    print('Total instance counts with object points < 512 points: {}'.format(instance_cnt_less_512))
-    print('Percentage of object instances with less than 512 points : {}'.format(round(perc_instance_cnt_less_512, 3)))
-
-    sorted_counts_dict = OrderedDict(sorted(point_counts.items(), key = lambda x: getitem(x[1], 'count'), reverse=True)) 
-    topkcounts = {k : sorted_counts_dict[k]['count']  for k in list(sorted_counts_dict)[:20]}
-    visualisation.visualise_dict_counts(topkcounts, title = 'Instance Classes with Points Less Than 512')
-
-    topkcounts = {k : sorted_counts_dict[k]['diff_512']  for k in list(sorted_counts_dict)[:20]}
-    visualisation.visualise_dict_counts(topkcounts, title = 'Instance Classes with How Many Points Less Than 512')
-
-    assert False
-    
-
     subscan_ids = np.array(subscan_ids_processed) 
     print('[INFO] Updating Overlap Data..')
     anchor_data_filename = osp.join(data_dir, 'files', 'anchors_{}.json'.format(split))
@@ -276,14 +245,119 @@ def process_data(args, cfg):
             continue
         anchor_data.append(anchor_data_idx)
     
-    # common.write_json(anchor_data, osp.join(data_write_dir, 'anchors_{}.json'.format(split)))
+    common.write_json(anchor_data, osp.join(data_write_dir, 'anchors_{}.json'.format(split)))
 
     print('[INFO] Saving {} scan ids...'.format(split))
-    # np.savetxt(osp.join(data_write_dir, '{}_scans_subscenes.txt'.format(split)), subscan_ids, fmt='%s')
+    print(len(subscan_ids))
+    np.savetxt(osp.join(data_write_dir, '{}_scans_subscenes.txt'.format(split)), subscan_ids, fmt='%s')
+
+
+def make_bow_vector(sentence, word_2_idx):
+    # create a vector of zeros of vocab size = len(word_to_idx)
+    vec = np.zeros(len(word_2_idx))
+    for word in sentence:
+        if word not in word_2_idx:
+            print(word)
+            raise ValueError('houston we have a problem')
+        else:
+            vec[word_2_idx[word]]+=1
+    return vec
+
+def calculate_bow_node_edge_feats(data_write_dir):
+    print('[INFO] Starting BOW Feature Calculation For Node Edge Features...')
+    scan_ids = os.listdir(osp.join(data_write_dir, 'data'))
+    scan_ids = sorted([scan_id[:-4] for scan_id in scan_ids])
+
+    idx_2_rel = {idx : relation_name for relation_name, idx in REL2IDX_SCAN3R.items()}
+    
+    wordToIx = {}
+    for key in REL2IDX_SCAN3R.keys():
+        wordToIx[key] = len(wordToIx)
+
+    print('[INFO] Size of Node Edge Vocabulary - {}'.format(len(wordToIx)))
+    print('[INFO] Generated Vocabulary, Calculating BOW Features...')
+    for scan_id in scan_ids:
+        data_dict_filename = osp.join(data_write_dir, 'data', '{}.pkl'.format(scan_id))
+        data_dict = common.load_pkl_data(data_dict_filename)
+        
+        edge = data_dict['edges']
+        objects_ids = data_dict['objects_id']
+        triples = data_dict['triples']
+        edges = data_dict['edges']
+
+        entities_edge_names = [None] * len(objects_ids)
+        for idx in range(len(edges)):
+            edge = edges[idx]
+            entity_idx = edge[0]
+            rel_name = idx_2_rel[triples[idx][2]]
+
+            if rel_name == 'inside':
+                print(scan_id)
+
+            if entities_edge_names[entity_idx] is None:
+                entities_edge_names[entity_idx] = [rel_name]
+            else:
+                entities_edge_names[entity_idx].append(rel_name)
+            
+        entity_edge_feats = None
+        for entity_edge_names in entities_edge_names:
+            entity_edge_feat = np.expand_dims(make_bow_vector(entity_edge_names, wordToIx), 0)
+            entity_edge_feats = entity_edge_feat if entity_edge_feats is None else np.concatenate((entity_edge_feats, entity_edge_feat), axis = 0)
+
+        data_dict['bow_vec_object_edge_feats'] = entity_edge_feat
+        assert entity_edge_feats.shape[0] == data_dict['objects_count']
+        
+        common.write_pkl_data(data_dict, data_dict_filename)
+    
+    print('[INFO] Completed BOW Feature Calculation For Node Edge Features.')
+
+def calculate_bow_node_attr_feats(data_write_dir):
+    print('[INFO] Starting BOW Feature Calculation For Node Attribute Features...')
+    scan_ids = os.listdir(osp.join(data_write_dir, 'data'))
+    scan_ids = sorted([scan_id[:-4] for scan_id in scan_ids])
+    
+    word_2_ix = {}
+    for scan_id in tqdm(scan_ids):
+        data_dict_filename = osp.join(data_write_dir, 'data', '{}.pkl'.format(scan_id))
+        data_dict = common.load_pkl_data(data_dict_filename)
+        attributes = data_dict['object_attributes']
+
+        for object_attr in attributes:
+            for attr in object_attr:
+                if attr not in word_2_ix:
+                    word_2_ix[attr] = len(word_2_ix)
+    common.write_pkl_data(word_2_ix, osp.join( '/'.join(data_write_dir.split('/')[:-1]), 'obj_attr.pkl'))
+
+    print('[INFO] Size of Node Attribute Vocabulary - {}'.format(len(word_2_ix)))
+    print('[INFO] Generated Vocabulary, Calculating BOW Features...')
+
+    for scan_id in scan_ids:
+        data_dict_filename = osp.join(data_write_dir, 'data', '{}.pkl'.format(scan_id))
+        data_dict = common.load_pkl_data(data_dict_filename)
+        attributes = data_dict['object_attributes']
+
+        bow_vec_attrs = None
+        for object_attr in attributes:
+            bow_vec_attr = np.expand_dims(make_bow_vector(object_attr, word_2_ix), 0)
+            bow_vec_attrs = bow_vec_attr if bow_vec_attrs is None else np.concatenate((bow_vec_attrs, bow_vec_attr), axis = 0)
+        
+        data_dict['bow_vec_object_attr_feats'] = bow_vec_attrs
+        assert bow_vec_attrs.shape[0] == data_dict['objects_count']
+        common.write_pkl_data(data_dict, data_dict_filename)
+    
+    print('[INFO] Completed BOW Feature Calculation For Node Attribute Features.')
+
 
 if __name__ == '__main__':
     args, cfg = parse_args()
     print('======== Scan3R Subscan preprocessing with {} Scene Graphs ========'.format('GT' if not cfg.predicted_sg else 'Predicted'))
     process_data(args, cfg)
+
+    mode = args.mode
+    data_dir = osp.join(cfg.data_dir, 'out')
+    data_write_dir = osp.join(data_dir, 'files', mode)
+    common.ensure_dir(data_write_dir)
+    calculate_bow_node_attr_feats(data_write_dir)
+    calculate_bow_node_edge_feats(data_write_dir)
 
 

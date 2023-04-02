@@ -1,56 +1,51 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
-# All rights reserved.
-#
-# This source code is licensed under the license found in the
-# LICENSE file in the root directory of this source tree.
-#
-
 import logging
-import os
+import coloredlogs
 
-OK = '\033[92m'
-WARNING = '\033[93m'
-FAIL = '\033[91m'
-END = '\033[0m'
 
-PINK = '\033[95m'
-BLUE = '\033[94m'
-GREEN = OK
-RED = FAIL
-WHITE = END
-YELLOW = WARNING
+def create_logger(log_file=None):
+    logger = logging.getLogger()
+    logger.handlers.clear()
+    logger.setLevel(level=logging.DEBUG)
+    logger.propagate = False
 
-class colorlogger():
-    def __init__(self, log_dir, log_name='out.txt'):
-        # set log
-        self._logger = logging.getLogger(log_name)
-        self._logger.setLevel(logging.INFO)
-        log_file = os.path.join(log_dir, log_name)
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
-        file_log = logging.FileHandler(log_file, mode='a')
-        file_log.setLevel(logging.INFO)
-        console_log = logging.StreamHandler()
-        console_log.setLevel(logging.INFO)
-        formatter = logging.Formatter(
-            "{}%(asctime)s{} %(message)s".format(GREEN, END),
-            "%m-%d %H:%M:%S")
-        file_log.setFormatter(formatter)
-        console_log.setFormatter(formatter)
-        self._logger.addHandler(file_log)
-        self._logger.addHandler(console_log)
+    format_str = '[%(asctime)s] [%(levelname).4s] %(message)s'
 
-    def debug(self, msg):
-        self._logger.debug(str(msg))
+    stream_handler = logging.StreamHandler()
+    colored_formatter = coloredlogs.ColoredFormatter(format_str)
+    stream_handler.setFormatter(colored_formatter)
+    logger.addHandler(stream_handler)
 
-    def info(self, msg):
-        self._logger.info(str(msg))
+    if log_file is not None:
+        file_handler = logging.FileHandler(log_file)
+        formatter = logging.Formatter(format_str, datefmt='%Y-%m-%d %H:%M:%S')
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
 
-    def warning(self, msg):
-        self._logger.warning(WARNING + 'WRN: ' + str(msg) + END)
+    return logger
 
-    def critical(self, msg):
-        self._logger.critical(RED + 'CRI: ' + str(msg) + END)
+class Logger:
+    def __init__(self, log_file=None, local_rank=-1):
+        if local_rank == 0 or local_rank == -1:
+            self.logger = create_logger(log_file=log_file)
+        else:
+            self.logger = None
 
-    def error(self, msg):
-        self._logger.error(RED + 'ERR: ' + str(msg) + END)
+    def debug(self, message):
+        if self.logger is not None:
+            self.logger.debug(message)
+
+    def info(self, message):
+        if self.logger is not None:
+            self.logger.info(message)
+
+    def warning(self, message):
+        if self.logger is not None:
+            self.logger.warning(message)
+
+    def error(self, message):
+        if self.logger is not None:
+            self.logger.error(message)
+
+    def critical(self, message):
+        if self.logger is not None:
+            self.logger.critical(message)

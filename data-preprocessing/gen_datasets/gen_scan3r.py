@@ -11,7 +11,7 @@ from torch.utils.data import Dataset
 import time
 
 from utils import common, point_cloud, scan3r, open3d, visualisation
-from utils.logger import colorlogger
+from utils.logger import Logger
 
 class SubGenScan3R(Dataset):
     ''' Subset Generation from 3RScan dataset '''
@@ -23,13 +23,13 @@ class SubGenScan3R(Dataset):
         self.out_dir = osp.join(cfg.data_dir, 'out')
         self.scene_out_dir = osp.join(self.out_dir, 'scenes')
         self.file_out_dir = osp.join(self.out_dir, 'files')
-
-        self.logger = colorlogger(self.file_out_dir, log_name='log.txt')
         self.split = split
 
         common.ensure_dir(self.scene_out_dir)
         common.ensure_dir(self.file_out_dir)
         random.seed(cfg.seed)
+
+        self.logger = Logger(log_file=osp.join(self.file_out_dir, 'log.txt'))
         
         self.scan_ids = np.genfromtxt(osp.join(self.file_dir, '{}_scans.txt'.format(self.split)), dtype = str)
 
@@ -116,7 +116,7 @@ class SubGenScan3R(Dataset):
 
                 if overlap_ratio >= 0.1 and overlap_ratio <= 0.9:
                     anchor_obj_ids = np.unique(src_ply_data['objectId'][common_pts_idx_src])
-                    overlap_data.append({'src' : subscan_ids[subscan_pair[0]], 'ref' : subscan_pair[subscan_pair[1]], 
+                    overlap_data.append({'src' : subscan_ids[subscan_pair[0]], 'ref' : subscan_ids[subscan_pair[1]], 
                             'overlap' : overlap_ratio, 'anchorIds' : anchor_obj_ids.tolist()})
         
         common.write_json(overlap_data, anchor_file_name)
@@ -127,8 +127,8 @@ class SubGenScan3R(Dataset):
         common.write_json(self.subscene_objs, osp.join(self.file_out_dir,'objects_subscenes_{}.json'.format(self.split)))
         
         self.logger.info('[INFO] Choosing a (realistic) subset of subscenes generated...')
-        all_subscan_ids = os.listdir(self.scene_out_dir)
-
+        all_subscan_ids = [subscan_id for subscan_id in os.listdir(self.scene_out_dir) if subscan_id[:subscan_id.index('_')] in self.scan_ids]
+        all_subscan_ids = np.array(all_subscan_ids)
         self.logger.info('[INFO] Displaying information for {} split...'.format(self.split))
         self.logger.info('[INFO] Total 3RScan scenes : {}'.format(self.scan_ids.shape[0]))
         self.logger.info('[INFO] Total generated subscenes : {}'.format(all_subscan_ids.shape[0]))
@@ -136,10 +136,9 @@ class SubGenScan3R(Dataset):
         subscan_ids = []
         for scan_id in self.scan_ids:
             subscan_ids_scan = [subscan_id for subscan_id in all_subscan_ids if subscan_id.startswith(scan_id)]
-            if len(subscan_ids_scan) == 0: continue
 
             if len(subscan_ids_scan) > self.num_subscans_per_scan:
-                subscan_ids_scan = np.random.choice(subscan_ids_scan, self.num_subscans_per_scan)
+                subscan_ids_scan = np.random.choice(subscan_ids_scan, self.num_subscans_per_scan, replace=False)
             
             subscan_ids.append(subscan_ids_scan)
         

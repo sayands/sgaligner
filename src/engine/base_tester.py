@@ -6,21 +6,18 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader
 
-from utils import common, torch_util
+from utils import common
 from utils.logger import colorlogger
-from utils.timer import Timer
 from aligner.sg_aligner import *
 from aligner.losses import *
 
-from datasets.scan3r import Scan3RDataset
+from datasets import get_dataset
 from base import Base
+from utils import torch_util
 
 class BaseTester(Base):
     def __init__(self, cfg):
-        super(BaseTester, self).__init__()
-
-        self.do_augmentation = cfg.train.use_augmentation
- 
+        super(BaseTester, self).__init__() 
         self.modules = cfg.val.modules
         self.module_name = '_'.join(self.modules)
         self.dataset_name = cfg.data.name
@@ -38,28 +35,29 @@ class BaseTester(Base):
         # tensorboard writer
         self.writer = SummaryWriter(self.log_dir)
 
-        self.num_workers = cfg.val.num_workers
-        self.start_epoch = 0
-        self.end_epoch = cfg.val.end_epoch
+        self.num_workers = cfg.num_workers
         self.batch_size = cfg.val.batch_size
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.cfg = cfg
         self.split = 'val'
 
-        self._make_model()
-        self._make_generator(split='val')
+        self.register_model()
+        self._make_generator()
 
-    def _make_model(self):
+    def load_snapshot(self, snapshot):
+        torch_util.load_model(self.model, snapshot)
+
+    def register_model(self):
         self.logger.info("Creating graph and optimizer...")
         self.model = MultiModalEncoder(train_modules=self.modules, rel_dim=self.cfg.model.rel_dim, attr_dim=self.cfg.model.attr_dim)
         self.model.to(self.device)
         self.model.eval()
     
     def _make_generator(self):
-        self.dataset = Scan3RDataset(self.cfg, self.split)
+        self.dataset = get_dataset(self.dataset_name)
         self.logger.info("Creating {} dataset of {} samples...".format(self.split, len(self.dataset)))
         self.data_loader = DataLoader(self.dataset, batch_size=self.batch_size, shuffle=True, collate_fn = self.dataset.collate_fn,
-                                        num_workers=self.num_workers, pin_memory=True, drop_last=True)
+                                      num_workers=self.num_workers, pin_memory=True, drop_last=True)
         self.iter_per_epoch = self.data_loader.__len__()
         
     

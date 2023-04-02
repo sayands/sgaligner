@@ -9,7 +9,7 @@ from torch.autograd import Variable
 import numpy as np
 import torch.nn.functional as F
 from torchsummary import summary
-from networks import BaseNetwork
+from aligner.networks.base import BaseNetwork
 
 class STN3d(nn.Module):
     def __init__(self, point_size=3):

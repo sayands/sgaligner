@@ -12,7 +12,7 @@ from utils import common, scan3r, point_cloud, open3d
 class Scan3RDataset(data.Dataset):
     def __init__(self, cfg, split):
         self.split = split
-        self.pc_resolution = cfg.split.pc_res
+        self.pc_resolution = cfg.val.pc_res if split == 'val' else cfg.train.pc_res
 
         self.subscans_dir = osp.join(cfg.data_dir, 'out')
         self.subscans_scenes_dir = osp.join(self.subscans_dir, 'scenes')
@@ -26,7 +26,7 @@ class Scan3RDataset(data.Dataset):
         self.do_augmentation = False if self.split == 'val' else cfg.train.use_augmentation
 
         self.rot_factor = cfg.train.rot_factor
-        self.augment_noise = cfg.augmentation_noise
+        self.augment_noise = cfg.train.augmentation_noise
 
         # Jitter
         self.scale = 0.01
