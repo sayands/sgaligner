@@ -2,6 +2,7 @@ import os
 import os.path as osp
 import numpy as np
 
+import torch
 import torch.utils.data as data
 
 import sys
@@ -46,8 +47,8 @@ class Scan3RDataset(data.Dataset):
         overlap = graph_data['overlap']
         
         # Centering
-        src_points = scan3r.load_plydata_npy(osp.join(self.scan3r_subscenes_scans_dir, '{}/data.npy'.format(src_scan_id)), obj_ids = None)
-        ref_points = scan3r.load_plydata_npy(osp.join(self.scan3r_subscenes_scans_dir, '{}/data.npy'.format(ref_scan_id)), obj_ids = None)
+        src_points = scan3r.load_plydata_npy(osp.join(self.subscans_scenes_dir, '{}/data.npy'.format(src_scan_id)), obj_ids = None)
+        ref_points = scan3r.load_plydata_npy(osp.join(self.subscans_scenes_dir, '{}/data.npy'.format(ref_scan_id)), obj_ids = None)
 
         if self.split == 'train':
             if np.random.rand(1)[0] > 0.5:
@@ -62,7 +63,7 @@ class Scan3RDataset(data.Dataset):
         
         src_object_ids = src_data_dict['objects_id']
         ref_object_ids = ref_data_dict['objects_id']
-        anchor_obj_ids = graph_data['anchor_ids']
+        anchor_obj_ids = graph_data['anchorIds']
         global_object_ids = np.concatenate((src_data_dict['objects_cat'], ref_data_dict['objects_cat']))
         
         anchor_obj_ids = [anchor_obj_id for anchor_obj_id in anchor_obj_ids if anchor_obj_id != 0]
@@ -86,7 +87,8 @@ class Scan3RDataset(data.Dataset):
         
         ref_object_id2idx = ref_data_dict['object_id2idx']
         e2i_idxs = np.array([ref_object_id2idx[anchor_obj_id] for anchor_obj_id in anchor_obj_ids]) + src_object_points.shape[0] # e2i
-        e2j_idxs = np.array([ref_object_id2idx[object_id] for object_id in ref_data_dict['objects_id'] if object_id not in anchor_obj_ids]) + ref_object_points.shape[0] # e2j
+        e2j_idxs = np.array([ref_object_id2idx[object_id] for object_id in ref_data_dict['objects_id'] if object_id not in anchor_obj_ids]) + src_object_points.shape[0] # e2j
+
         
         tot_object_points = torch.cat([torch.from_numpy(src_object_points), torch.from_numpy(ref_object_points)]).type(torch.FloatTensor)
         tot_bow_vec_obj_attr_feats = torch.cat([torch.from_numpy(src_data_dict['bow_vec_object_attr_feats']), torch.from_numpy(ref_data_dict['bow_vec_object_attr_feats'])])
@@ -164,6 +166,7 @@ class Scan3RDataset(data.Dataset):
         data_dict = {}
         data_dict['tot_obj_pts'] = tot_object_points
         data_dict['e1i'], data_dict['e2i'], data_dict['e1j'], data_dict['e2j'] = self._collate_entity_idxs(batch)
+
         data_dict['e1i_count'] = np.stack([data['e1i_count'] for data in batch])
         data_dict['e2i_count'] = np.stack([data['e2i_count'] for data in batch])
         data_dict['e1j_count'] = np.stack([data['e1j_count'] for data in batch])
@@ -182,6 +185,7 @@ class Scan3RDataset(data.Dataset):
         data_dict['pcl_center'] = np.stack([data['pcl_center'] for data in batch])
         
         data_dict['overlap'] = np.stack([data['overlap'] for data in batch])
+        data_dict['batch_size'] = data_dict['overlap'].shape[0]
 
         return data_dict
         

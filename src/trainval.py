@@ -3,7 +3,7 @@ import time
 
 import torch.optim as optim
 from engine import EpochBasedTrainer
-from datasets.loaders import train_val_data_loader
+from datasets.loaders import get_train_val_data_loader
 from aligner.sg_aligner import *
 from aligner.losses import *
 
@@ -21,12 +21,10 @@ class Trainer(EpochBasedTrainer):
         self.zoom = cfg.loss.zoom
         self.weight_align_loss = cfg.loss.alignment_loss_weight
         self.weight_contrastive_loss = cfg.loss.constrastive_loss_weight
-
-        print('hello')
         
         # dataloader
         start_time = time.time()
-        train_loader, val_loader = train_val_data_loader(cfg)
+        train_loader, val_loader = get_train_val_data_loader(cfg)
         loading_time = time.time() - start_time
         message = 'Data loader created: {:.3f}s collapsed.'.format(loading_time)
         self.logger.info(message)
@@ -68,15 +66,15 @@ class Trainer(EpochBasedTrainer):
     def train_step(self, epoch, iteration, data_dict):
         output_dict = self.model(data_dict)
         loss_dict = self.loss_func(output_dict, data_dict)
-        result_dict = self.evaluator(output_dict, data_dict)
-        loss_dict.update(result_dict)
+        # result_dict = self.evaluator(output_dict, data_dict)
+        # loss_dict.update(result_dict)
         return output_dict, loss_dict
 
     def val_step(self, epoch, iteration, data_dict):
         output_dict = self.model(data_dict)
         loss_dict = self.loss_func(output_dict, data_dict)
-        result_dict = self.evaluator(output_dict, data_dict)
-        loss_dict.update(result_dict)
+        # result_dict = self.evaluator(output_dict, data_dict)
+        # loss_dict.update(result_dict)
         return output_dict, loss_dict
 
     def set_eval_mode(self):

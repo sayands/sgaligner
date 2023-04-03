@@ -1,7 +1,7 @@
 import os
 import os.path as osp
 from typing import Tuple, Dict
-from tqdm import tqdm
+import tqdm
 
 import ipdb
 import torch
@@ -10,6 +10,8 @@ import torch
 from engine.base_trainer import BaseTrainer
 from utils import torch_util
 from utils.timer import Timer
+from utils.common import get_log_string
+from utils.summary_board import SummaryBoard
 
 class EpochBasedTrainer(BaseTrainer):
     def __init__(self, cfg, max_epoch, parser=None, cudnn_deterministic=True, autograd_anomaly_detection=False,
@@ -95,9 +97,28 @@ class EpochBasedTrainer(BaseTrainer):
             self.timer.add_process_time()
             self.after_train_step(self.epoch, self.inner_iteration, data_dict, output_dict, result_dict)
             result_dict = self.release_tensors(result_dict)
+            self.summary_board.update_from_result_dict(result_dict)
+
+            # logging
+            if self.inner_iteration % self.log_steps == 0:
+                summary_dict = self.summary_board.summary()
+                message = get_log_string(
+                    result_dict=summary_dict,
+                    epoch=self.epoch,
+                    max_epoch=self.max_epoch,
+                    iteration=self.inner_iteration,
+                    max_iteration=total_iterations,
+                    lr=self.get_lr(),
+                    timer=self.timer,
+                )
+                self.logger.info(message)
+                self.write_event('train', summary_dict, self.iteration)
+            
+            torch.cuda.empty_cache()
         
         self.after_train_epoch(self.epoch)
-        # TODO : add log string
+        message = get_log_string(self.summary_board.summary(), epoch=self.epoch, timer=self.timer)
+        self.logger.critical(message)
         
         # scheduler
         if self.scheduler is not None:
@@ -111,7 +132,7 @@ class EpochBasedTrainer(BaseTrainer):
     def inference_epoch(self):
         __class__.set_eval_mode(self)
         self.before_val_epoch(self.epoch)
-
+        summary_board = SummaryBoard(adaptive=True)
         timer = Timer()
         total_iterations = len(self.val_loader)
         pbar = tqdm.tqdm(enumerate(self.val_loader), total=total_iterations)
@@ -126,18 +147,28 @@ class EpochBasedTrainer(BaseTrainer):
             timer.add_process_time()
             self.after_val_step(self.epoch, self.inner_iteration, data_dict, output_dict, result_dict)
             result_dict = self.release_tensors(result_dict)
+            
+            summary_board.update_from_result_dict(result_dict)
+            message = get_log_string(
+                result_dict=summary_board.summary(),
+                epoch=self.epoch,
+                iteration=self.inner_iteration,
+                max_iteration=total_iterations,
+                timer=timer,
+            )
+            pbar.set_description(message)
             torch.cuda.empty_cache()
         
-        self.after_val_epoch(self.epoch)
+        summary_dict = summary_board.summary()
+        message = '[Val] ' + get_log_string(summary_dict, epoch=self.epoch, timer=timer)
+        self.logger.critical(message)
+        self.write_event('val', summary_dict, self.epoch)
         __class__.set_train_mode(self)
     
-    # def set_train_mode(self):
-    #     self.training = True
-    #     self.model.train()
-
-    #     if self.modules
-
-    #     torch.set_grad_enabled(True)
+    def set_train_mode(self):
+        self.training = True
+        self.model.train()
+        torch.set_grad_enabled(True)
 
     def run(self):
         assert self.train_loader is not None

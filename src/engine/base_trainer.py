@@ -23,7 +23,7 @@ def inject_default_parser(parser=None):
     parser.add_argument('--resume', action='store_true', help='resume training')
     parser.add_argument('--snapshot', default=None, help='load from snapshot')
     parser.add_argument('--epoch', type=int, default=None, help='load epoch')
-    parser.add_argument('--log_steps', type=int, default=10, help='logging steps')
+    parser.add_argument('--log_steps', type=int, default=500, help='logging steps')
     parser.add_argument('--local_rank', type=int, default=-1, help='local rank for ddp')
     return parser
 
@@ -31,7 +31,6 @@ class BaseTrainer(abc.ABC):
     def __init__(self, cfg, parser=None,cudnn_deterministic=True, autograd_anomaly_detection=False, save_all_snapshots=True,
                  run_grad_check=False, grad_acc_steps=1):
         super(BaseTrainer, self).__init__()
-        print('base trainer')
         parser = inject_default_parser(parser)
         self.args = parser.parse_args()
         
@@ -222,8 +221,6 @@ class BaseTrainer(abc.ABC):
 
     def write_event(self, phase, event_dict, index):
         r"""Write TensorBoard event."""
-        if self.local_rank != 0:
-            return
         for key, value in event_dict.items():
             self.writer.add_scalar(f'{phase}/{key}', value, index)
 

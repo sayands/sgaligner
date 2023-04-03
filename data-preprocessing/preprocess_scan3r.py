@@ -304,8 +304,8 @@ def calculate_bow_node_edge_feats(data_write_dir):
             entity_edge_feat = np.expand_dims(make_bow_vector(entity_edge_names, wordToIx), 0)
             entity_edge_feats = entity_edge_feat if entity_edge_feats is None else np.concatenate((entity_edge_feats, entity_edge_feat), axis = 0)
 
-        data_dict['bow_vec_object_edge_feats'] = entity_edge_feat
-        assert entity_edge_feats.shape[0] == data_dict['objects_count']
+        data_dict['bow_vec_object_edge_feats'] = entity_edge_feats
+        assert data_dict['bow_vec_object_edge_feats'].shape[0] == data_dict['objects_count']
         
         common.write_pkl_data(data_dict, data_dict_filename)
     
@@ -351,13 +351,13 @@ def calculate_bow_node_attr_feats(data_write_dir):
 if __name__ == '__main__':
     args, cfg = parse_args()
     print('======== Scan3R Subscan preprocessing with {} Scene Graphs ========'.format('GT' if not cfg.predicted_sg else 'Predicted'))
-    process_data(args, cfg)
+    # process_data(args, cfg)
 
     mode = args.mode
     data_dir = osp.join(cfg.data_dir, 'out')
     data_write_dir = osp.join(data_dir, 'files', mode)
     common.ensure_dir(data_write_dir)
-    calculate_bow_node_attr_feats(data_write_dir)
+    # calculate_bow_node_attr_feats(data_write_dir)
     calculate_bow_node_edge_feats(data_write_dir)
 
 

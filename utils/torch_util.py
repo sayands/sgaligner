@@ -1,22 +1,12 @@
-import os 
-import os.path as osp
 import numpy as np
+import random
+import math
+from typing import Callable
+
 import torch
 import torch.distributed as dist
 import torch.utils.data
 import torch.backends.cudnn as cudnn
-import random
-
-def save_model(state, file_name, logger=None):
-    torch.save(state, file_name)
-    if logger: logger.info("Write snapshot into {}".format(file_name))
-
-def load_model(model, file_name, logger=None):
-    ckpt = torch.load(file_name)
-    
-    model.load_state_dict(ckpt['network'])
-    if logger: logger.info("Loaded snapshot from {}".format(file_name))
-    return model
 
 def release_cuda(x):
     r"""Release all tensors to item or numpy array."""
@@ -115,3 +105,41 @@ def build_dataloader(
     )
 
     return data_loader
+
+# Learning Rate Scheduler
+class CosineAnnealingFunction(Callable):
+    def __init__(self, max_epoch, eta_min=0.0):
+        self.max_epoch = max_epoch
+        self.eta_min = eta_min
+
+    def __call__(self, last_epoch):
+        next_epoch = last_epoch + 1
+        return self.eta_min + 0.5 * (1.0 - self.eta_min) * (1.0 + math.cos(math.pi * next_epoch / self.max_epoch))
+
+
+class WarmUpCosineAnnealingFunction(Callable):
+    def __init__(self, total_steps, warmup_steps, eta_init=0.1, eta_min=0.1):
+        self.total_steps = total_steps
+        self.warmup_steps = warmup_steps
+        self.normal_steps = total_steps - warmup_steps
+        self.eta_init = eta_init
+        self.eta_min = eta_min
+
+    def __call__(self, last_step):
+        # last_step starts from -1, which means last_steps=0 indicates the first call of lr annealing.
+        next_step = last_step + 1
+        if next_step < self.warmup_steps:
+            return self.eta_init + (1.0 - self.eta_init) / self.warmup_steps * next_step
+        else:
+            if next_step > self.total_steps:
+                return self.eta_min
+            next_step -= self.warmup_steps
+            return self.eta_min + 0.5 * (1.0 - self.eta_min) * (1 + np.cos(np.pi * next_step / self.normal_steps))
+
+
+def build_warmup_cosine_lr_scheduler(optimizer, total_steps, warmup_steps, eta_init=0.1, eta_min=0.1, grad_acc_steps=1):
+    total_steps //= grad_acc_steps
+    warmup_steps //= grad_acc_steps
+    cosine_func = WarmUpCosineAnnealingFunction(total_steps, warmup_steps, eta_init=eta_init, eta_min=eta_min)
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, cosine_func)
+    return scheduler

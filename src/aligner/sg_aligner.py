@@ -75,7 +75,7 @@ class MultiModalEncoder(nn.Module):
 
         for module in self.modules:
             if module == 'gat':
-                gat_emb = None
+                structure_embed = None
                 for idx in range(batch_size):
                     src_object_count = data_dict['graph_per_obj_count'][idx][0]
                     ref_object_count = data_dict['graph_per_obj_count'][idx][1]
@@ -96,10 +96,10 @@ class MultiModalEncoder(nn.Module):
                     ref_edges = torch.transpose(data_dict['edges'][start_edge_idx : start_edge_idx + ref_edges_count], 0, 1).to(torch.int32)
                     start_edge_idx += ref_edges_count
 
-                    src_structure_embedding = self.gat(src_objects_rel_pose, src_edges)
-                    ref_structure_embedding = self.gat(ref_objects_rel_pose, ref_edges)
+                    src_structure_embedding = self.structure_encoder(src_objects_rel_pose, src_edges)
+                    ref_structure_embedding = self.structure_encoder(ref_objects_rel_pose, ref_edges)
                     
-                    structure_embed = torch.cat([src_structure_embedding, ref_structure_embedding]) if gat_emb is None else \
+                    structure_embed = torch.cat([src_structure_embedding, ref_structure_embedding]) if structure_embed is None else \
                                    torch.cat([structure_embed, src_structure_embedding, ref_structure_embedding]) 
 
                 emb = self.structure_embedding(structure_embed)

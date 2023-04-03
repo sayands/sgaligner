@@ -48,8 +48,6 @@ _C.train.pc_res = 512
 _C.train.use_augmentation = True
 _C.train.rot_factor = 1.0
 _C.train.augmentation_noise = 0.005
-_C.train.end_epoch = 50
-_C.train.learning_rate = 1e-3
 
 # Validation params
 _C.val = edict()
@@ -65,17 +63,17 @@ _C.model.alignment_thresh = 0.4
 
 # optim
 _C.optim = edict()
-_C.optim.lr = 1e-4
+_C.optim.lr = 1e-3
 _C.optim.lr_decay = 0.95
 _C.optim.lr_decay_steps = 1
 _C.optim.weight_decay = 1e-6
-_C.optim.max_epoch = 40
+_C.optim.max_epoch = 50
 _C.optim.grad_acc_steps = 1
 
 # loss
 _C.loss = edict()
-_C.loss.alignment_loss_weight = 0.5
-_C.loss.constrastive_loss_weight = 0.5
+_C.loss.alignment_loss_weight = 1.0
+_C.loss.constrastive_loss_weight = 1.0
 _C.loss.zoom = 0.1
 
 # registration model params
@@ -85,6 +83,10 @@ _C.reg_model.num_p2p_corrs = 20000
 _C.reg_model.corr_score_thresh = 0.1
 _C.reg_model.rmse_thresh = 0.2 
 _C.reg_model.inlier_ratio_thresh = 0.05
+
+# inference
+_C.metrics = edict()
+_C.metrics.all_k = [1, 2, 3, 4, 5]
 
 def make_cfg():
     return _C
