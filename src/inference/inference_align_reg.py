@@ -58,7 +58,8 @@ class Tester(SingleTester):
         # Registration
         self.reg_k = cfg.reg_model.K
         reg_snapshot = self.args.reg_snapshot
-        self.registration_evaluator = RegistrationEvaluator(self.device, cfg, reg_snapshot, self.logger)
+        self.registration_evaluator = RegistrationEvaluator(self.device, cfg, reg_snapshot, self.logger, visualise_registration=True)
+        self.visualise_registration = True
 
     def create_model(self):
         model = MultiModalEncoder(modules = self.modules, rel_dim = self.rel_dim, attr_dim=self.attr_dim).to(self.device)

@@ -39,7 +39,7 @@ class Tester(SingleTester):
 
         self.aligner_overlapper_data = {'true' : [], 'pred' : []}
         self.registration_overlapper_data = {'true' : [], 'pred' : []}
-        
+
         # dataloader
         start_time = time.time()
         dataset, data_loader = get_val_dataloader(cfg)
@@ -77,7 +77,7 @@ class Tester(SingleTester):
             self.logger.critical(message)
 
     def compute_precision_recall(self, result_dict):
-        tn, fp, fn, tp = confusion_matrix(result_dict['true'], result_dict['pred']).ravel()
+        tn, fp, fn, tp = confusion_matrix(result_dict['true'], result_dict['pred'], labels=[0, 1]).ravel()
         precision = round(tp / (tp + fp), 4)
         recall = round(tp / (tp + fn), 4)
         f1_score = round(2 * (precision * recall)/ (precision + recall), 4)

@@ -102,7 +102,7 @@ python inference/inference_align_reg.py --snapshot <path to SGAligner trained mo
 #### Finding Overlapping vs Non-Overlapping Pairs
 :heavy_exclamation_mark: Run [Generating Overlapping and Non-Overlapping Subscan Pairs](#Generating-Overlapping-and-Non-Overlapping-Subscan-Pairs) before.
 
-Change ``_C.data.anchor_type_name`` in the corresponding configuration file to ``_subscan_anchors_w_wo_overlap`` for running this inference. To run the inference, you need to:
+To run the inference, you need to:
 
 ```bash
 cd src
@@ -122,6 +122,8 @@ python inference/inference_find_overlapper.py --snapshot <path to SGAligner trai
 ### TODO
 - [ ] Add usage on Predicted Scene Graphs
 - [ ] Provide a script to port the predicted scene graphs to the ground truth 3RScan format.
+- [ ] Add visualisation to registration results
+- [ ] Add 3D Point Cloud Mosaicking
 
 
 [//]: <> (We also show results on sub-scans generated using predicted scene graphs, please refer to the 3DSSG repository for the graph prediction process.)

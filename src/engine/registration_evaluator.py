@@ -7,16 +7,17 @@ import abc
 import torch
 import torch.nn as nn
 
-from utils import torch_util, registration, point_cloud
+from utils import torch_util, registration, visualisation
 from GeoTransformer.config import make_cfg
 from GeoTransformer.model import create_model
 from GeoTransformer.geotransformer.utils.data import registration_collate_fn_stack_mode
 
 class RegistrationEvaluator(abc.ABC):
-    def __init__(self, device,  cfg, snapshot, logger):
+    def __init__(self, device,  cfg, snapshot, logger, visualise_registration=True):
         self.snapshot = snapshot
         self.device = device
         self.logger = logger
+        self.visualise_registration = visualise_registration
         
         # Load Registration Model
         self.cfg = make_cfg()
@@ -109,7 +110,7 @@ class RegistrationEvaluator(abc.ABC):
             }
 
         else:
-            mean_corr_score
+            return mean_corr_score
     
     def run_aligner_registration(self, reg_data_dict):
         node_corrs = reg_data_dict['node_corrs']
@@ -174,7 +175,6 @@ class RegistrationEvaluator(abc.ABC):
         normal_reg_results_dict = self.run_normal_registration(reg_data_dict)
 
         if normal_reg_results_dict is None: return None, None
-
         aligner_reg_results_dict = self.run_aligner_registration(reg_data_dict)
 
         return normal_reg_results_dict, aligner_reg_results_dict
