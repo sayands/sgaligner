@@ -1,10 +1,10 @@
-import os.path as osp
 import numpy as np
-import cv2 
-import graphviz
+import cv2
 import open3d.ml.torch as ml3d
 import torch
 from scipy.spatial.transform import Rotation
+from typing import Optional
+from scipy.spatial import cKDTree
 
 def normalize_pc(pc, return_distances=False):
     pc_ = pc[:,:3]
@@ -107,6 +107,29 @@ def get_visible_pts_from_cam_pose(scene_pts, cam_2_world_pose, intrinsic_info):
     depth_mask = cam_pts_3d[..., 2] > 0.0
     visible_mask = np.logical_and(depth_mask, np.logical_and(out_x_mask, out_y_mask))
     return visible_mask
+
+def get_nearest_neighbor(
+    q_points: np.ndarray,
+    s_points: np.ndarray,
+    return_index: bool = False,
+):
+    r"""Compute the nearest neighbor for the query points in support points."""
+    s_tree = cKDTree(s_points)
+    distances, indices = s_tree.query(q_points, k=1) #, n_jobs=-1)
+    if return_index:
+        return distances, indices
+    else:
+        return distances
+
+def apply_transform(points: np.ndarray, transform: np.ndarray, normals: Optional[np.ndarray] = None):
+    rotation = transform[:3, :3]
+    translation = transform[:3, 3]
+    points = np.matmul(points, rotation.T) + translation
+    if normals is not None:
+        normals = np.matmul(normals, rotation.T)
+        return points, normals
+    else:
+        return points
 
 # def createAndWriteSceneGraph(sceneData, outDir):
 #     subScanRelationshipData = sceneData['relationships']
