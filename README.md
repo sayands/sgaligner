@@ -43,12 +43,12 @@ cuda: 11.6
 ```
 You can set up a conda environment as follows :
 ```bash
-git clone git@github.com:sayands/sgaligner.git
+git clone --recurse-submodules -j8 git@github.com:sayands/sgaligner.git
 cd sgaligner
 conda env create -f req.yml
 ```
 
-Please follow the submodule for additional installation requirements of [GeoTransformer](https://github.com/sayands/GeoTransformer).
+Please follow the submodule for additional installation requirements and setup of [GeoTransformer](https://github.com/sayands/GeoTransformer).
 
 ### Data + Benchmark :hammer:
 After installing the dependencies, we preprocess the datasets and provide the benchmarks. 
@@ -60,7 +60,7 @@ Download [3RScan](https://github.com/WaldJohannaU/3RScan) and [3DSSG](https://3d
 ├── 3RScan
 │   ├── files       <- all 3RScan and 3DSSG meta files (NOT the scan data)  
 │   ├── scenes      <- scans
-│   ├── out         <- Default output directory for generated subscans (created when running pre-processing)
+│   └── out         <- Default output directory for generated subscans (created when running pre-processing)
 ```
 
 Change the absolute paths in ``utils/define.py``.
@@ -72,23 +72,22 @@ bash scripts/generate_data_scan3r_gt.sh
 ```
 To adhere to our evaluation procedure, please do not change the seed value in the files in ``configs/`` directory. 
 
-#### Finding Overlapping vs Non-Overlapping Subscenes
-To generate non-overlapping pairs, use : 
+#### Generating Overlapping and Non-Overlapping Subscan Pairs
+To generate overlapping and non-overlapping pairs, use : 
 
 ```bash
-python data-preprocessing/gen_all_pairs_fileset.py --config 
+python data-preprocessing/gen_all_pairs_fileset.py
 ```
-This will generate exactly the same number of non-overlapping pairs as overlapping pairs generated before during subscan generation.
+This will create a fileset with the same number of non-overlapping pairs as overlapping pairs generated before during subscan generation.
 
-
-Usage on Predicted Scene Graphs : Coming Soon! 
+Usage on **Predicted Scene Graphs** : Coming Soon! 
 
 ### Training :bullettrain_side:
 To train SGAligner, you can use :
 
 ```bash
 cd src
-python trainval.py --config_file <config_file_name>
+python trainval.py
 ```
 We provide config files for the corresponding data in ``config/`` directory. Please change the parameters in the configuration files, if you want to tune the hyper-parameters.
 
@@ -100,7 +99,9 @@ cd src
 python inference/inference_align_reg.py --snapshot <path to SGAligner trained model> --reg_snapshot <path to GeoTransformer model trained on 3DMatch>
 ```
 
-#### Finding Overlapping vs Non-Overlapping Scans
+#### Finding Overlapping vs Non-Overlapping Pairs
+:heavy_exclamation_mark: Run [Generating Overlapping and Non-Overlapping Subscan Pairs](#Generating-Overlapping-and-Non-Overlapping-Subscan-Pairs) before.
+
 Change ``_C.data.anchor_type_name`` in the corresponding configuration file to ``_subscan_anchors_w_wo_overlap`` for running this inference. To run the inference, you need to:
 
 ```bash

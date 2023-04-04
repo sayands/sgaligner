@@ -14,7 +14,7 @@ from utils import torch_util, scan3r, registration
 from aligner.sg_aligner import *
 from datasets.loaders import get_val_dataloader
 from configs.config_scan3r_gt import make_cfg
-from utils import alignment, common
+from utils import alignment, common, point_cloud
 
 def make_parser():
     parser = argparse.ArgumentParser()
@@ -146,14 +146,19 @@ class Tester(SingleTester):
                 raw_points = scan3r.load_plydata_npy(osp.join(self.test_dataset.scans_scenes_dir, scan_id, 'data.npy'))
                 
                 reg_data_dict = dict()
-                reg_data_dict['pcl_center'] = pcl_center
                 reg_data_dict['node_corrs'] = node_corrs
-                reg_data_dict['src_points'] = src_points
-                reg_data_dict['ref_points'] = ref_points
+                reg_data_dict['src_points'] = src_points - pcl_center
+                reg_data_dict['ref_points'] = ref_points - pcl_center
                 reg_data_dict['src_plydata'] = src_plydata
-                reg_data_dict['ref_plydata'] = ref_plydata
-                reg_data_dict['raw_points'] = raw_points
+                reg_data_dict['ref_plydata'] = ref_plydata 
+                reg_data_dict['raw_points'] = raw_points - pcl_center
                 reg_data_dict['gt_transform'] = np.eye(4)
+
+                _, gt_src_corr_idxs = point_cloud.compute_pcl_overlap(reg_data_dict['src_points'], reg_data_dict['ref_points'] )
+                _, gt_ref_corr_idxs = point_cloud.compute_pcl_overlap(reg_data_dict['ref_points'] , reg_data_dict['src_points'])
+
+                reg_data_dict['gt_src_corr_points'] = reg_data_dict['src_points'][gt_src_corr_idxs]
+                reg_data_dict['gt_ref_corr_points'] = reg_data_dict['ref_points'] [gt_ref_corr_idxs]
 
                 all_reg_results_dict = self.registration_evaluator.run_registration(reg_data_dict)
                 normal_reg_results_dict = all_reg_results_dict[0]
@@ -169,6 +174,8 @@ class Tester(SingleTester):
         
         return { 'alignment_metrics' : self.alignment_metrics_meter, 'normal_registration_metrics' : self.normal_registration_metrics_meter,
                  'aligner_registration_metrics' : self.aligner_registration_metrics_meter }
+
+
 
 def main():
     cfg = make_cfg()

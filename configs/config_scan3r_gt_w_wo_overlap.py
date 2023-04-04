@@ -41,7 +41,7 @@ _C.data.subscenes_per_scene = 7
 _C.data.filter_segment_size = 512
 _C.data.min_obj_points = 50
 _C.data.name = '3RScan'
-_C.data.anchor_type_name = ''
+_C.data.anchor_type_name = '' # '_subscan_anchors_w_wo_overlap'
 
 # Training params
 _C.train = edict()
@@ -109,7 +109,3 @@ def main():
     args = parse_args()
     if args.link_output:
         os.symlink(cfg.output_dir, 'output')
-
-
-
-

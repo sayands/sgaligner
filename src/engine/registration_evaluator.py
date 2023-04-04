@@ -77,13 +77,14 @@ class RegistrationEvaluator(abc.ABC):
         output_dict = torch_util.release_cuda(output_dict)
         return output_dict
 
-    def run_normal_registration(self, reg_data_dict):
+    def run_normal_registration(self, reg_data_dict, evaluate_registration=True):
         src_points = reg_data_dict['src_points']
         ref_points = reg_data_dict['ref_points']
-        raw_points = reg_data_dict['raw_points']
-        gt_transform = reg_data_dict['gt_transform']
-        gt_src_corr_points = reg_data_dict['gt_src_corr_points']
-        gt_ref_corr_points = reg_data_dict['gt_ref_corr_points']
+        raw_points = reg_data_dict['raw_points'] if 'raw_points' in reg_data_dict else None
+        gt_transform = reg_data_dict['gt_transform'] if 'gt_transform' in reg_data_dict else None
+        
+        gt_src_corr_points = reg_data_dict['gt_src_corr_points'] if 'gt_src_corr_points' in reg_data_dict else None
+        gt_ref_corr_points = reg_data_dict['gt_ref_corr_points'] if 'gt_ref_corr_points' in reg_data_dict else None
 
         output_dict = self.perform_registration(src_points, ref_points, gt_transform)
         if output_dict is None: return None
@@ -91,16 +92,24 @@ class RegistrationEvaluator(abc.ABC):
         est_transform = output_dict["estimated_transform"]
         ref_corr_points = output_dict['ref_corr_points']
         src_corr_points = output_dict['src_corr_points']
-        chamfer_distance, inlier_ratio, rre, rte, recall, fmr = self.evaluate_registration(src_points, ref_points, raw_points, est_transform, gt_transform, src_corr_points, ref_corr_points, gt_src_corr_points, gt_ref_corr_points)
 
-        return {
-            'CD' : chamfer_distance,
-            'IR' : inlier_ratio,
-            'RRE' : rre,
-            'RTE' : rte,
-            'recall' : recall,
-            'FMR' : fmr
-        }
+        corr_scores =  output_dict['corr_scores']
+        mean_corr_score = np.mean(corr_scores)
+
+        if evaluate_registration:
+            chamfer_distance, inlier_ratio, rre, rte, recall, fmr = self.evaluate_registration(src_points, ref_points, raw_points, est_transform, gt_transform, src_corr_points, ref_corr_points, gt_src_corr_points, gt_ref_corr_points)
+
+            return {
+                'CD' : chamfer_distance,
+                'IR' : inlier_ratio,
+                'RRE' : rre,
+                'RTE' : rte,
+                'recall' : recall,
+                'FMR' : fmr
+            }
+
+        else:
+            mean_corr_score
     
     def run_aligner_registration(self, reg_data_dict):
         node_corrs = reg_data_dict['node_corrs']
@@ -162,17 +171,6 @@ class RegistrationEvaluator(abc.ABC):
         }
 
     def run_registration(self, reg_data_dict):
-        pcl_center = reg_data_dict['pcl_center']
-        reg_data_dict['src_points'] = reg_data_dict['src_points'] - pcl_center
-        reg_data_dict['ref_points'] = reg_data_dict['ref_points'] - pcl_center
-        reg_data_dict['raw_points'] = reg_data_dict['raw_points'] - pcl_center
-
-        _, gt_src_corr_idxs = point_cloud.compute_pcl_overlap(reg_data_dict['src_points'], reg_data_dict['ref_points'] )
-        _, gt_ref_corr_idxs = point_cloud.compute_pcl_overlap(reg_data_dict['ref_points'] , reg_data_dict['src_points'])
-
-        reg_data_dict['gt_src_corr_points'] = reg_data_dict['src_points'][gt_src_corr_idxs]
-        reg_data_dict['gt_ref_corr_points'] = reg_data_dict['ref_points'] [gt_ref_corr_idxs]
-
         normal_reg_results_dict = self.run_normal_registration(reg_data_dict)
 
         if normal_reg_results_dict is None: return None, None
