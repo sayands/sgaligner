@@ -9,7 +9,7 @@ parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(parent_dir)
 
 from engine.single_tester import SingleTester
-from utils import torch_util
+from utils import torch_util, scan3r, registration
 from aligner.sg_aligner import *
 from datasets.loaders import get_val_dataloader
 from configs.config_scan3r_gt import make_cfg
@@ -30,15 +30,19 @@ class Tester(SingleTester):
 
         # Metrics params
         self.all_k = cfg.metrics.all_k
+        self.alignment_metrics_meter = {'mrr' : []}
+        for k in self.all_k:
+            self.alignment_metrics_meter[k] = {'correct' : 0, 'total' : 0}
 
         # dataloader
         start_time = time.time()
-        data_loader = get_val_dataloader(cfg)
+        dataset, data_loader = get_val_dataloader(cfg)
         loading_time = time.time() - start_time
         message = f'Data loader created: {loading_time:.3f}s collapsed.'
         self.logger.info(message)
 
         self.register_loader(data_loader)
+        self.register_dataset(dataset)
 
         # model 
         model = self.create_model()
@@ -65,7 +69,7 @@ class Tester(SingleTester):
         
         return metrics_dict
         
-    def eval_step(self, iteration, data_dict, output_dict):
+    def eval_step(self, iteration, data_dict, output_dict, gt_transform=np.eye(4)):
         e1i_start_idx = 0
         e2i_start_idx = 0
         obj_cnt_start_idx = 0
@@ -74,16 +78,13 @@ class Tester(SingleTester):
         data_dict = torch_util.release_cuda(data_dict)
         embedding = output_dict['joint'] if len(self.modules) > 1 else output_dict[self.modules[0]]
 
-        # Add metrics
-        alignment_metrics_meter = {'mrr' : []}
-        for k in self.all_k:
-            alignment_metrics_meter[k] = {'correct' : 0, 'total' : 0}
-        
         for batch_idx in range(self.test_loader.batch_size):
-            src_obj_count = data_dict['graph_per_obj_count'][batch_idx][0]
-            ref_obj_count = data_dict['graph_per_obj_count'][batch_idx][1]
+            src_objects_count = data_dict['graph_per_obj_count'][batch_idx][0]
+            ref_objects_count = data_dict['graph_per_obj_count'][batch_idx][1]
 
-            all_obj_ids = data_dict['obj_ids']
+            pcl_center = data_dict['pcl_center'][batch_idx]
+
+            all_objects_ids = data_dict['obj_ids']
             e1i_end_idx = e1i_start_idx + data_dict['e1i_count'][batch_idx]
             e2i_end_idx = e2i_start_idx + data_dict['e2i_count'][batch_idx]
             obj_cnt_end_idx = obj_cnt_start_idx + data_dict['tot_obj_count'][batch_idx]
@@ -105,18 +106,111 @@ class Tester(SingleTester):
             assert np.max(e1i_idxs) <= rank_list.shape[0]
 
             # Compute Mean Reciprocal Rank
-            alignment_metrics_meter['mrr'] = alignment_metrics.compute_mean_reciprocal_rank(rank_list, e1i_idxs, e2i_idxs, alignment_metrics_meter['mrr'] )
+            self.alignment_metrics_meter['mrr'] = alignment_metrics.compute_mean_reciprocal_rank(rank_list, e1i_idxs, e2i_idxs, self.alignment_metrics_meter['mrr'] )
 
             # Compute Hits@k = {1, 2, 3, 4, 5}
             for k in self.all_k:
                 correct, total = alignment_metrics.compute_hits_k(rank_list, e1i_idxs, e2i_idxs, k)
-                alignment_metrics_meter[k]['correct'] += correct
-                alignment_metrics_meter[k]['total'] += total
+                self.alignment_metrics_meter[k]['correct'] += correct
+                self.alignment_metrics_meter[k]['total'] += total
+            
+            # Perform Registration 
+            # Get node correspondences
+            # node_corrs = alignment_metrics.compute_node_corrs(rank_list, e1i_idxs, src_objects_count, k=1)
+            # node_corrs = alignment_metrics.get_node_corrs_objects_ids(node_corrs, all_objects_ids, curr_total_objects_count)
+
+
+            # # Get ground truth point correspondences
+
+            # # Compute node-wise registration
+            # # Load subscene points
+            # src_scan_id = data_dict['scene_ids'][batch_idx][0]
+            # ref_scan_id = data_dict['scene_ids'][batch_idx][1]
+
+            # src_points, src_plydata = scan3r.load_plydata_npy(osp.join(self.test_dataset.subscans_scenes_dir, src_scan_id, 'data.npy'), obj_ids=None, return_ply_data=True)
+            # ref_points, ref_plydata = scan3r.load_plydata_npy(osp.join(self.test_dataset.subscans_scenes_dir, ref_scan_id, 'data.npy'), obj_ids=None, return_ply_data=True)
+
+            # src_points -= pcl_center
+            # ref_points -= pcl_center
+
+            # point_corrs = {'src' : [], 'ref' : [], 'scores' : []}
+            # for node_corr in node_corrs:
+            #     node_points_src = src_points[np.where(src_plydata['objectId']  == node_corr[0])[0]]
+            #     node_points_ref = ref_points[np.where(src_plydata['objectId']  == node_corr[1])[0]]
+
+            #     # if node_points_src
+
+            #     src_feats = np.ones_like(node_points_src[:, :1])
+            #     ref_feats = np.ones_like(node_points_ref[:, :1])
+
+            #     data_dict = {
+            #         "ref_points": node_points_ref.astype(np.float32),
+            #         "src_points": node_points_src.astype(np.float32),
+            #         "ref_feats": ref_feats.astype(np.float32),
+            #         "src_feats": src_feats.astype(np.float32),
+            #         "transform" : gt_transform.astype(np.float32)
+            #     }
+
+            #     with torch.no_grad():
+            #         data_dict = registration_collate_fn_stack_mode([data_dict], 
+            #                         self.alignmentCfg.backbone.num_stages, self.alignmentCfg.backbone.init_voxel_size, 
+            #                         self.alignmentCfg.backbone.init_radius, neighbor_limits)
+                    
+            #         # output dict
+            #         data_dict = torch_util.to_cuda(data_dict)
+            #         try:
+            #             output_dict = self.registration_model(data_dict)
+            #         except:
+            #             continue
+                
+            #     output_dict = torch_util.release_cuda(output_dict)
+            #     ref_corr_points = output_dict['ref_corr_points']
+            #     src_corr_points = output_dict['src_corr_points']
+            #     corr_scores = output_dict['corr_scores']
+
+            #     if corr_scores.shape[0] > CONF.NUM_P2P_CORRS // len(node_idx_correspondences):
+            #         sel_indices = np.argsort(-corr_scores)[: CONF.NUM_P2P_CORRS // len(node_idx_correspondecnes)]
+            #         ref_corr_points = ref_corr_points[sel_indices]
+            #         src_corr_points = src_corr_points[sel_indices]
+
+            #     point_corrs['src'].append(src_corr_points)
+            #     point_corrs['ref'].append(ref_corr_points)
+            #     point_corrs['scores'].append(corr_scores)
+
+            # point_corrs['src'] = np.concatenate(point_corrs['src'])
+            # point_corrs['ref'] = np.concatenate(point_corrs['ref'])
+
+            # corrs_ransac = np.concatenate([point_corrs['src'], point_corrs['ref']], axis=1)
+            
+            # if corrs_ransac.shape[0] > CONF.NUM_P2P_CORRS:
+            #     corr_sel_indices = np.random.choice(correspondences.shape[0], CONF.NUM_P2P_CORRS)
+            #     corrs_ransac = corrs_ransac[corr_sel_indices]
+            
+            # # RANSAC params
+            # threshold = 0.03
+            # min_iters = 5000
+            # max_iters = 5000
+            # use_sprt = False
+
+            # pose, _ = pygcransac.findRigidTransform(np.ascontiguousarray(corrs_ransac), probabilities = [], 
+            #                                         threshold = threshold, neighborhood_size = 4, 
+            #                                         sampler = 1, min_iters = min_iters, max_iters = max_iters, spatial_coherence_weight = 0.0, 
+            #                                         use_space_partitioning = not use_sprt, neighborhood = 0, conf = 0.999, use_sprt = use_sprt)
+            # if pose is None: continue
+
+            # scan_id = src_scan_id[ : src_scan_id.index('_')]
+            # raw_points = scan3r.load_plydata_npy(osp.join(self.test_dataset.scans_scenes_dir, scan_id, 'data.npy'))
+
+            # chamfer_distance = registration.compute_modified_chamfer_distance(src_points, ref_points, raw_points, pose, gt_transform)
+            # inlier_ratio = registration.compute_inlier_ratio(corrs_ransac[:, 3:], corrs_ransac[:, :3], gt_transform)
+            # rre, rte = registration.compute_registration_error(gt_transform, pose, inverse_trans=True) 
+            # registration_rmse = registration.compute_registration_rmse(gt_src_corr_points , gt_ref_corr_points, pose)
 
             obj_cnt_start_idx = obj_cnt_end_idx
             curr_total_objects_count += data_dict['tot_obj_count'][batch_idx]
             e1i_start_idx, e2i_start_idx = e1i_end_idx, e2i_end_idx
-        return alignment_metrics_meter
+        
+        return self.alignment_metrics_meter
 
 def main():
     cfg = make_cfg()

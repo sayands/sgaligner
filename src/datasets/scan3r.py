@@ -15,6 +15,10 @@ class Scan3RDataset(data.Dataset):
         self.split = split
         self.pc_resolution = cfg.val.pc_res if split == 'val' else cfg.train.pc_res
 
+        self.scans_dir = osp.join(cfg.data_dir)
+        self.scans_scenes_dir = osp.join(self.scans_dir, 'scenes')
+        self.scans_files_dir = osp.join(self.scans_dir, 'files')
+        
         self.subscans_dir = osp.join(cfg.data_dir, 'out')
         self.subscans_scenes_dir = osp.join(self.subscans_dir, 'scenes')
         self.subscans_files_dir = osp.join(self.subscans_dir, 'files')

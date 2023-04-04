@@ -76,7 +76,9 @@ class BaseTester(abc.ABC):
         message = 'Model description:\n' + str(model)
         self.logger.info(message)
         return model
-
+    def register_dataset(self, test_dataset):
+        r"""Register data set."""
+        self.test_dataset = test_dataset
     def register_loader(self, test_loader):
         r"""Register data loader."""
         self.test_loader = test_loader
