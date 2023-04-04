@@ -17,6 +17,7 @@ _C.data_dir = define.SCAN3R_ORIG_DIR
 _C.label_file_name = define.LABEL_FILE_NAME_GT
 _C.predicted_sg = False
 _C.modules = ['gat', 'point', 'rel', 'attr']
+_C.registration = True
 _C.working_dir = osp.dirname(osp.abspath(__file__))
 _C.root_dir = osp.dirname(_C.working_dir)
 _C.exp_name = '_'.join(_C.modules)
@@ -40,6 +41,7 @@ _C.data.subscenes_per_scene = 7
 _C.data.filter_segment_size = 512
 _C.data.min_obj_points = 50
 _C.data.name = '3RScan'
+_C.data.anchor_type_name = '_subscan_anchors_w_wo_overlap'
 
 # Training params
 _C.train = edict()
@@ -78,11 +80,16 @@ _C.loss.zoom = 0.1
 
 # registration model params
 _C.reg_model = edict()
+_C.reg_model.K = 1
 _C.reg_model.neighbor_limits = [38, 36, 36, 38]
 _C.reg_model.num_p2p_corrs = 20000
 _C.reg_model.corr_score_thresh = 0.1
 _C.reg_model.rmse_thresh = 0.2 
 _C.reg_model.inlier_ratio_thresh = 0.05
+_C.reg_model.ransac_threshold = 0.03
+_C.reg_model.ransac_min_iters = 5000
+_C.reg_model.ransac_max_iters = 5000
+_C.reg_model.ransac_use_sprt = False
 
 # inference
 _C.metrics = edict()

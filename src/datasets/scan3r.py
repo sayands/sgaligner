@@ -8,12 +8,13 @@ import torch.utils.data as data
 import sys
 sys.path.append('..')
 
-from utils import common, scan3r, point_cloud, open3d
+from utils import common, scan3r
 
 class Scan3RDataset(data.Dataset):
     def __init__(self, cfg, split):
         self.split = split
         self.pc_resolution = cfg.val.pc_res if split == 'val' else cfg.train.pc_res
+        self.anchor_type_name = cfg.data.anchor_file
 
         self.scans_dir = osp.join(cfg.data_dir)
         self.scans_scenes_dir = osp.join(self.scans_dir, 'scenes')
@@ -24,7 +25,7 @@ class Scan3RDataset(data.Dataset):
         self.subscans_files_dir = osp.join(self.subscans_dir, 'files')
         self.mode = 'orig' if self.split == 'train' else cfg.val.data_mode
 
-        self.anchor_data_filename = osp.join(self.subscans_files_dir, '{}/anchors_{}.json'.format(self.mode, split))
+        self.anchor_data_filename = osp.join(self.subscans_files_dir, '{}/anchors_{}_{}.json'.format(self.mode, self.anchor_type_name, split))
         print('[INFO] Reading from {} with point cloud resolution - {}'.format(self.anchor_data_filename, self.pc_resolution))
         self.anchor_data = common.load_json(self.anchor_data_filename)
         self.is_training = self.split == 'train'

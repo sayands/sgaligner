@@ -23,7 +23,7 @@ class SummaryBoard:
             self.register_all(names)
 
     def register_meter(self, name):
-        self.meter_dict[name] = AverageMeter(last_n=self.last_n)
+        self.meter_dict[name] = AverageMeter()
         self.meter_names.append(name)
 
     def register_all(self, names):

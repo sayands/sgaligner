@@ -4,13 +4,12 @@ from tqdm import tqdm
 import numpy as np 
 from scipy.spatial import ConvexHull
 import argparse
-from collections import OrderedDict
-from operator import getitem
+import random
 
 import sys
 sys.path.append('.')
 
-from utils import define, common, point_cloud, label_mapping, visualisation
+from utils import define, common, point_cloud, label_mapping
 from configs import config_scan3r_gt, config_scan3r_pred
 
 CLASS2IDX_SCAN3R = label_mapping.class_2_idx_scan3r(define.SCAN3R_ORIG_DIR)
@@ -350,14 +349,15 @@ def calculate_bow_node_attr_feats(data_write_dir):
 
 if __name__ == '__main__':
     args, cfg = parse_args()
+    random.seed(cfg.seed)
     print('======== Scan3R Subscan preprocessing with {} Scene Graphs ========'.format('GT' if not cfg.predicted_sg else 'Predicted'))
-    # process_data(args, cfg)
+    process_data(args, cfg)
 
     mode = args.mode
     data_dir = osp.join(cfg.data_dir, 'out')
     data_write_dir = osp.join(data_dir, 'files', mode)
     common.ensure_dir(data_write_dir)
-    # calculate_bow_node_attr_feats(data_write_dir)
+    calculate_bow_node_attr_feats(data_write_dir)
     calculate_bow_node_edge_feats(data_write_dir)
 
 

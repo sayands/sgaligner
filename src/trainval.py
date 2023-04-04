@@ -47,8 +47,8 @@ class Trainer(EpochBasedTrainer):
         # optimizer and scheduler
         optimizer = optim.Adam(self.params, lr=cfg.optim.lr, weight_decay=cfg.optim.weight_decay)
         self.register_optimizer(optimizer)
-        scheduler = optim.lr_scheduler.StepLR(optimizer, cfg.optim.lr_decay_steps, gamma=cfg.optim.lr_decay)
-        self.register_scheduler(scheduler)
+        # scheduler = optim.lr_scheduler.StepLR(optimizer, cfg.optim.lr_decay_steps, gamma=cfg.optim.lr_decay)
+        # self.register_scheduler(scheduler)
 
         self.logger.info('Initialisation Complete')
 

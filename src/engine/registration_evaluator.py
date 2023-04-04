@@ -1,97 +1,128 @@
 import sys
 import argparse
-import os.path as osp
 import numpy as np
+import pygcransac
+import abc
 
 import torch
 import torch.nn as nn
 
-from utils import torch_util, registration
+from utils import torch_util, registration, point_cloud
 from GeoTransformer.config import make_cfg
 from GeoTransformer.model import create_model
 from GeoTransformer.geotransformer.utils.data import registration_collate_fn_stack_mode
 
-
-def inject_default_parser(parser=None):
-    if parser is None:
-        parser = argparse.ArgumentParser()
-    parser.add_argument('--reg_snapshot', default=None, help='load from snapshot')
-    return parser
-
-class RegistrationEvaluator(nn.Module):
-    def __init__(self, device,  cfg, parser=None):
-        super(RegistrationEvaluator, self).__init__()
-        parser = inject_default_parser(parser)
-        self.args = parser.parse_args()
-
+class RegistrationEvaluator(abc.ABC):
+    def __init__(self, device,  cfg, snapshot, logger):
+        self.snapshot = snapshot
         self.device = device
+        self.logger = logger
         
         # Load Registration Model
         self.cfg = make_cfg()
-        self.model = create_model().to(self.device) TODO
+        self.model = create_model(self.cfg).to(self.device)
         self.model.eval()
-        state_dict_path = self.args.reg_snapshot
-        state_dict = torch.load(state_dict_path)
-        self.model.load_state_dict(state_dict['model'])
+        self.load_snapshot(self.snapshot)
 
         # Params
-        self.num_p2p_corrs
-        self.neighbor_limits
-        self.ransac_threshold = 
-        self.ransac_min_iters = 5000
-        self.ransac_max_iters = 5000
-        self.ransac_use_sprt = False
+        self.num_p2p_corrs = cfg.reg_model.num_p2p_corrs
+        self.neighbor_limits = cfg.reg_model.neighbor_limits
+        self.ransac_threshold = cfg.reg_model.ransac_threshold
+        self.ransac_min_iters = cfg.reg_model.ransac_min_iters
+        self.ransac_max_iters = cfg.reg_model.ransac_max_iters
+        self.ransac_use_sprt = cfg.reg_model.ransac_use_sprt
+        self.inlier_ratio_thresh = cfg.reg_model.inlier_ratio_thresh
+        self.rmse_thresh = cfg.reg_model.rmse_thresh
+        self.min_object_points = 50
 
-    @torch.no_grad
-    def evaluate_registration(self, src_points, ref_points, raw_points, pose, gt_transform, corrs_ransac, gt_src_corr_points, gt_ref_corr_points):
-        chamfer_distance = registration.compute_modified_chamfer_distance(src_points, ref_points, raw_points, pose, gt_transform)
-        inlier_ratio = registration.compute_inlier_ratio(corrs_ransac[:, 3:], corrs_ransac[:, :3], gt_transform)
-        rre, rte = registration.compute_registration_error(gt_transform, pose, inverse_trans=True) 
-        registration_rmse = registration.compute_registration_rmse(gt_src_corr_points , gt_ref_corr_points, pose)
+    def load_snapshot(self, snapshot):
+        self.logger.info('Loading from "{}".'.format(snapshot))
+        state_dict = torch.load(snapshot, map_location=self.device)
+        assert 'model' in state_dict, 'No model can be loaded.'
+        self.model.load_state_dict(state_dict['model'], strict=True)
+        self.logger.info('Registration Model has been loaded.')
+    
+    def evaluate_registration(self, src_points, ref_points, raw_points, est_transform, gt_transform, src_corr_points, ref_corr_points, gt_src_corr_points, gt_ref_corr_points):
+        chamfer_distance = registration.compute_modified_chamfer_distance(src_points, ref_points, raw_points, est_transform, gt_transform)
+        inlier_ratio = registration.compute_inlier_ratio(ref_corr_points, src_corr_points, gt_transform)
+        rre, rte = registration.compute_registration_error(gt_transform, est_transform, inverse_trans=True) 
+        registration_rmse = registration.compute_registration_rmse(gt_ref_corr_points, gt_src_corr_points, est_transform)
+        fmr = float(inlier_ratio >= self.inlier_ratio_thresh)
+        accepted = registration_rmse < self.rmse_thresh
 
-        return chamfer_distance, inlier_ratio, rre, rte, registration_rmse
+        return chamfer_distance, inlier_ratio, rre, rte, float(accepted), fmr
 
-    @torch.no_grad()
-    def run(self, data_dict):
-        pcl_center = data_dict['pcl_center']
-        node_corrs = data_dict['node_corrs']
-        src_points = data_dict['src_points'] - pcl_center
-        ref_points = data_dict['ref_points'] - pcl_center
-        raw_points = data_dict['raw_points'] - pcl_center
-        src_plydata = data_dict['src_plydata'] 
-        ref_plydata = data_dict['ref_plydata']
-        gt_transform = data_dict['gt_transform']
+    def perform_registration(self, src_points, ref_points, gt_transform):
+        src_feats = np.ones_like(src_points[:, :1])
+        ref_feats = np.ones_like(ref_points[:, :1])
+
+        data_dict = {
+            "ref_points": ref_points.astype(np.float32),
+            "src_points": src_points.astype(np.float32),
+            "ref_feats": ref_feats.astype(np.float32),
+            "src_feats": src_feats.astype(np.float32),
+            "transform" : gt_transform.astype(np.float32)
+        }
+
+        with torch.no_grad():
+            data_dict = registration_collate_fn_stack_mode([data_dict], 
+                            self.cfg.backbone.num_stages, self.cfg.backbone.init_voxel_size, 
+                            self.cfg.backbone.init_radius, self.neighbor_limits)
+            # output dict
+            data_dict = torch_util.to_cuda(data_dict)
+            try:
+                output_dict = self.model(data_dict)
+            except:
+                return None
+        output_dict = torch_util.release_cuda(output_dict)
+        return output_dict
+
+    def run_normal_registration(self, reg_data_dict):
+        src_points = reg_data_dict['src_points']
+        ref_points = reg_data_dict['ref_points']
+        raw_points = reg_data_dict['raw_points']
+        gt_transform = reg_data_dict['gt_transform']
+        gt_src_corr_points = reg_data_dict['gt_src_corr_points']
+        gt_ref_corr_points = reg_data_dict['gt_ref_corr_points']
+
+        output_dict = self.perform_registration(src_points, ref_points, gt_transform)
+        if output_dict is None: return None
+
+        est_transform = output_dict["estimated_transform"]
+        ref_corr_points = output_dict['ref_corr_points']
+        src_corr_points = output_dict['src_corr_points']
+        chamfer_distance, inlier_ratio, rre, rte, recall, fmr = self.evaluate_registration(src_points, ref_points, raw_points, est_transform, gt_transform, src_corr_points, ref_corr_points, gt_src_corr_points, gt_ref_corr_points)
+
+        return {
+            'CD' : chamfer_distance,
+            'IR' : inlier_ratio,
+            'RRE' : rre,
+            'RTE' : rte,
+            'recall' : recall,
+            'FMR' : fmr
+        }
+    
+    def run_aligner_registration(self, reg_data_dict):
+        node_corrs = reg_data_dict['node_corrs']
+        src_points = reg_data_dict['src_points'] 
+        ref_points = reg_data_dict['ref_points']
+        raw_points = reg_data_dict['raw_points'] 
+        src_plydata = reg_data_dict['src_plydata'] 
+        ref_plydata = reg_data_dict['ref_plydata']
+        gt_transform = reg_data_dict['gt_transform']
+        gt_src_corr_points = reg_data_dict['gt_src_corr_points']
+        gt_ref_corr_points = reg_data_dict['gt_ref_corr_points']
         
-        
-        point_corrs = []
+        point_corrs = {'src' : [], 'ref' : [], 'scores' : []}
         for node_corr in node_corrs:
             node_points_src = src_points[np.where(src_plydata['objectId']  == node_corr[0])[0]]
             node_points_ref = ref_points[np.where(ref_plydata['objectId']  == node_corr[1])[0]]
 
-            src_feats = np.ones_like(node_points_src[:, :1])
-            ref_feats = np.ones_like(node_points_ref[:, :1])
+            if node_points_src.shape[0] < self.min_object_points or node_points_ref.shape[0] < self.min_object_points: continue
 
-            data_dict = {
-                "ref_points": node_points_ref.astype(np.float32),
-                "src_points": node_points_src.astype(np.float32),
-                "ref_feats": ref_feats.astype(np.float32),
-                "src_feats": src_feats.astype(np.float32),
-                "transform" : gt_transform.astype(np.float32)
-            }
+            output_dict = self.perform_registration(node_points_src, node_points_ref, gt_transform)
+            if output_dict is None: continue
 
-            with torch.no_grad():
-                data_dict = registration_collate_fn_stack_mode([data_dict], 
-                                self.cfg.backbone.num_stages, self.cfg.backbone.init_voxel_size, 
-                                self.cfg.backbone.init_radius, self.neighbor_limits)
-                
-                # output dict
-                data_dict = torch_util.to_cuda(data_dict)
-                try:
-                    output_dict = self.registration_model(data_dict)
-                except:
-                    continue
-            
-            output_dict = torch_util.release_cuda(output_dict)
             ref_corr_points = output_dict['ref_corr_points']
             src_corr_points = output_dict['src_corr_points']
             corr_scores = output_dict['corr_scores']
@@ -104,7 +135,9 @@ class RegistrationEvaluator(nn.Module):
             point_corrs['src'].append(src_corr_points)
             point_corrs['ref'].append(ref_corr_points)
             point_corrs['scores'].append(corr_scores)
-
+        
+        if len(point_corrs['src']) == 0 or len(point_corrs['ref']) == 0: return None
+        
         point_corrs['src'] = np.concatenate(point_corrs['src'])
         point_corrs['ref'] = np.concatenate(point_corrs['ref'])
 
@@ -118,13 +151,32 @@ class RegistrationEvaluator(nn.Module):
                                                          sampler = 1, min_iters = self.ransac_min_iters, max_iters = self.ransac_max_iters, spatial_coherence_weight = 0.0, 
                                                          use_space_partitioning = not self.ransac_use_sprt, neighborhood = 0, conf = 0.999, use_sprt = self.ransac_use_sprt)
         if est_transform is None: return None
-
-        chamfer_distance, inlier_ratio, rre, rte, registration_rmse = self.evaluate_registration(src_points, ref_points, raw_points, est_transform, gt_transform, 
-                                                                                                corrs_ransac, gt_src_corr_points, gt_ref_corr_points)
+        chamfer_distance, inlier_ratio, rre, rte, recall, fmr = self.evaluate_registration(src_points, ref_points, raw_points, est_transform, gt_transform, corrs_ransac[:, 3:], corrs_ransac[:, :3], gt_src_corr_points, gt_ref_corr_points)
         return {
             'CD' : chamfer_distance,
             'IR' : inlier_ratio,
             'RRE' : rre,
             'RTE' : rte,
-            'Reg_RMSE' : registration_rmse
+            'recall' : recall,
+            'FMR' : fmr
         }
+
+    def run_registration(self, reg_data_dict):
+        pcl_center = reg_data_dict['pcl_center']
+        reg_data_dict['src_points'] = reg_data_dict['src_points'] - pcl_center
+        reg_data_dict['ref_points'] = reg_data_dict['ref_points'] - pcl_center
+        reg_data_dict['raw_points'] = reg_data_dict['raw_points'] - pcl_center
+
+        _, gt_src_corr_idxs = point_cloud.compute_pcl_overlap(reg_data_dict['src_points'], reg_data_dict['ref_points'] )
+        _, gt_ref_corr_idxs = point_cloud.compute_pcl_overlap(reg_data_dict['ref_points'] , reg_data_dict['src_points'])
+
+        reg_data_dict['gt_src_corr_points'] = reg_data_dict['src_points'][gt_src_corr_idxs]
+        reg_data_dict['gt_ref_corr_points'] = reg_data_dict['ref_points'] [gt_ref_corr_idxs]
+
+        normal_reg_results_dict = self.run_normal_registration(reg_data_dict)
+
+        if normal_reg_results_dict is None: return None, None
+
+        aligner_reg_results_dict = self.run_aligner_registration(reg_data_dict)
+
+        return normal_reg_results_dict, aligner_reg_results_dict

@@ -54,9 +54,15 @@ def get_format_strings(kv_pairs):
         log_strings.append(format_string.format(key, value))
     return log_strings
 
+def update_dict(dictionary, to_add_dict):
+    for key in dictionary.keys():
+        dictionary[key].append(to_add_dict[key])
+    return dictionary
 
-def get_log_string(result_dict, epoch=None, max_epoch=None, iteration=None, max_iteration=None, lr=None, timer=None):
+def get_log_string(result_dict, name=None, epoch=None, max_epoch=None, iteration=None, max_iteration=None, lr=None, timer=None):
     log_strings = []
+    if name is not None: 
+        log_strings.append(name)
     if epoch is not None:
         epoch_string = f'Epoch: {epoch}'
         if max_epoch is not None:
@@ -79,5 +85,6 @@ def get_log_string(result_dict, epoch=None, max_epoch=None, iteration=None, max_
         log_strings.append('lr: {:.3e}'.format(lr))
     if timer is not None:
         log_strings.append(timer.tostring())
+    
     message = ', '.join(log_strings)
     return message

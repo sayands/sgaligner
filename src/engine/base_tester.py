@@ -17,6 +17,7 @@ def inject_default_parser(parser=None):
     parser.add_argument('--snapshot', default=None, help='load from snapshot')
     parser.add_argument('--test_epoch', type=int, default=None, help='test epoch')
     parser.add_argument('--test_iter', type=int, default=None, help='test iteration')
+    parser.add_argument('--reg_snapshot', default=None, help='load from snapshot')
     return parser
 
 class BaseTester(abc.ABC):

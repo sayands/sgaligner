@@ -1,6 +1,10 @@
 import numpy as np
 from scipy.spatial.transform import Rotation
 
+import sys
+sys.path.append('..')
+from utils.point_cloud import apply_transform, get_nearest_neighbor
+
 def compute_modified_chamfer_distance(src_points, ref_points, raw_points, est_transform, gt_transform):
     aligned_src_points = apply_transform(src_points, est_transform)
     chamfer_distance_p_q = get_nearest_neighbor(aligned_src_points, raw_points).mean()

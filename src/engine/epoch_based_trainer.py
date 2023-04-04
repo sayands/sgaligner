@@ -99,6 +99,8 @@ class EpochBasedTrainer(BaseTrainer):
             result_dict = self.release_tensors(result_dict)
             self.summary_board.update_from_result_dict(result_dict)
 
+            
+
             # logging
             if self.inner_iteration % self.log_steps == 0:
                 summary_dict = self.summary_board.summary()
@@ -130,7 +132,7 @@ class EpochBasedTrainer(BaseTrainer):
             if osp.exists(last_snapshot): os.remove(last_snapshot)
 
     def inference_epoch(self):
-        __class__.set_eval_mode(self)
+        self.set_eval_mode()
         self.before_val_epoch(self.epoch)
         summary_board = SummaryBoard(adaptive=True)
         timer = Timer()
@@ -180,7 +182,7 @@ class EpochBasedTrainer(BaseTrainer):
         elif self.args.snapshot is not None:
             self.load_snapshot(self.args.snapshot)
         
-        __class__.set_train_mode(self)
+        self.set_train_mode()
         while self.epoch < self.max_epoch:
             self.epoch += 1
             self.train_epoch()

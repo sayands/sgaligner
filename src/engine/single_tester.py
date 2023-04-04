@@ -54,13 +54,11 @@ class SingleTester(BaseTester):
             torch.cuda.synchronize()
             self.timer.add_process_time()
             # eval step
-            result_dict = self.eval_step(self.iteration, data_dict, output_dict)
+            results_dict = self.eval_step(self.iteration, data_dict, output_dict)
             message = f'{self.timer.tostring()}'
             pbar.set_description(message)
             torch.cuda.empty_cache()
         self.after_test_epoch()
-        
-        metrics_dict = self.compute_metrics(result_dict)
-        message = get_log_string(result_dict=metrics_dict, timer=self.timer)
-        self.logger.critical(message)
+
+        self.print_metrics(results_dict)
 
