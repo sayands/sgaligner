@@ -7,6 +7,10 @@ import torch
 import torch.nn as nn
 
 from utils import torch_util, registration
+from GeoTransformer.config import make_cfg
+from GeoTransformer.model import create_model
+from GeoTransformer.geotransformer.utils.data import registration_collate_fn_stack_mode
+
 
 def inject_default_parser(parser=None):
     if parser is None:
