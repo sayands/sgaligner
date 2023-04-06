@@ -40,8 +40,7 @@ class SingleTester(BaseTester):
         torch.set_grad_enabled(False)
         self.before_test_epoch()
         total_iterations = len(self.test_loader)
-        pbar = tqdm(enumerate(self.test_loader), total=total_iterations)
-        
+        pbar = tqdm(enumerate(self.test_loader), total=total_iterations)        
         for iteration, data_dict in pbar:
             # on start
             self.iteration = iteration + 1
@@ -58,6 +57,7 @@ class SingleTester(BaseTester):
             message = f'{self.timer.tostring()}'
             pbar.set_description(message)
             torch.cuda.empty_cache()
+        
         self.after_test_epoch()
 
         self.print_metrics(results_dict)

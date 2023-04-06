@@ -105,11 +105,9 @@ class Tester(SingleTester):
             # Load subscene points
             src_scan_id = data_dict['scene_ids'][batch_idx][0]
             ref_scan_id = data_dict['scene_ids'][batch_idx][1]
-            scan_id = src_scan_id[:src_scan_id.index('_')]
 
-            src_points, src_plydata = scan3r.load_plydata_npy(osp.join(self.test_dataset.subscans_scenes_dir, src_scan_id, 'data.npy'), obj_ids=None, return_ply_data=True)
-            ref_points, ref_plydata = scan3r.load_plydata_npy(osp.join(self.test_dataset.subscans_scenes_dir, ref_scan_id, 'data.npy'), obj_ids=None, return_ply_data=True)
-            raw_points = scan3r.load_plydata_npy(osp.join(self.test_dataset.scans_scenes_dir, scan_id, 'data.npy'))
+            src_points = scan3r.load_plydata_npy(osp.join(self.test_dataset.subscans_scenes_dir, src_scan_id, 'data.npy'), obj_ids=None, return_ply_data=False)
+            ref_points = scan3r.load_plydata_npy(osp.join(self.test_dataset.subscans_scenes_dir, ref_scan_id, 'data.npy'), obj_ids=None, return_ply_data=False)
 
             reg_data_dict = dict()
             reg_data_dict['src_points'] = src_points - pcl_center

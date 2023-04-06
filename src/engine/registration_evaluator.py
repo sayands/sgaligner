@@ -7,7 +7,8 @@ import abc
 import torch
 import torch.nn as nn
 
-from utils import torch_util, registration, visualisation
+from utils.point_cloud import apply_transform, get_nearest_neighbor
+from utils import torch_util, registration
 from GeoTransformer.config import make_cfg
 from GeoTransformer.model import create_model
 from GeoTransformer.geotransformer.utils.data import registration_collate_fn_stack_mode
@@ -43,15 +44,16 @@ class RegistrationEvaluator(abc.ABC):
         self.model.load_state_dict(state_dict['model'], strict=True)
         self.logger.info('Registration Model has been loaded.')
     
-    def evaluate_registration(self, src_points, ref_points, raw_points, est_transform, gt_transform, src_corr_points, ref_corr_points, gt_src_corr_points, gt_ref_corr_points):
+    def evaluate_registration(self, src_points, ref_points, raw_points, est_transform, gt_transform, 
+                              src_corr_points, ref_corr_points, gt_src_corr_points, gt_ref_corr_points):
         chamfer_distance = registration.compute_modified_chamfer_distance(src_points, ref_points, raw_points, est_transform, gt_transform)
         inlier_ratio = registration.compute_inlier_ratio(ref_corr_points, src_corr_points, gt_transform)
-        rre, rte = registration.compute_registration_error(gt_transform, est_transform, inverse_trans=True) 
+        rre, rte = registration.compute_registration_error(gt_transform, est_transform) 
         registration_rmse = registration.compute_registration_rmse(gt_ref_corr_points, gt_src_corr_points, est_transform)
         fmr = float(inlier_ratio >= self.inlier_ratio_thresh)
-        accepted = registration_rmse < self.rmse_thresh
+        accepted = float(registration_rmse < self.rmse_thresh)
 
-        return chamfer_distance, inlier_ratio, rre, rte, float(accepted), fmr
+        return chamfer_distance, inlier_ratio, rre, rte, accepted, fmr
 
     def perform_registration(self, src_points, ref_points, gt_transform):
         src_feats = np.ones_like(src_points[:, :1])
@@ -98,8 +100,11 @@ class RegistrationEvaluator(abc.ABC):
         mean_corr_score = np.mean(corr_scores)
 
         if evaluate_registration:
-            chamfer_distance, inlier_ratio, rre, rte, recall, fmr = self.evaluate_registration(src_points, ref_points, raw_points, est_transform, gt_transform, src_corr_points, ref_corr_points, gt_src_corr_points, gt_ref_corr_points)
-
+            chamfer_distance, inlier_ratio, rre, rte, recall, fmr = self.evaluate_registration(src_points, ref_points, raw_points, 
+                                                                                               est_transform, gt_transform, 
+                                                                                               src_corr_points, ref_corr_points, 
+                                                                                               gt_src_corr_points, gt_ref_corr_points)
+            if recall == 0.0: return None
             return {
                 'CD' : chamfer_distance,
                 'IR' : inlier_ratio,
@@ -108,31 +113,34 @@ class RegistrationEvaluator(abc.ABC):
                 'recall' : recall,
                 'FMR' : fmr
             }
-
+        
         else:
             return mean_corr_score
     
     def run_aligner_registration(self, reg_data_dict):
         node_corrs = reg_data_dict['node_corrs']
-        src_points = reg_data_dict['src_points'] 
+        src_points = reg_data_dict['src_points']
         ref_points = reg_data_dict['ref_points']
-        raw_points = reg_data_dict['raw_points'] 
+        raw_points = reg_data_dict['raw_points']
+
         src_plydata = reg_data_dict['src_plydata'] 
         ref_plydata = reg_data_dict['ref_plydata']
+
         gt_transform = reg_data_dict['gt_transform']
         gt_src_corr_points = reg_data_dict['gt_src_corr_points']
         gt_ref_corr_points = reg_data_dict['gt_ref_corr_points']
-        
+
         point_corrs = {'src' : [], 'ref' : [], 'scores' : []}
+
         for node_corr in node_corrs:
             node_points_src = src_points[np.where(src_plydata['objectId']  == node_corr[0])[0]]
             node_points_ref = ref_points[np.where(ref_plydata['objectId']  == node_corr[1])[0]]
 
             if node_points_src.shape[0] < self.min_object_points or node_points_ref.shape[0] < self.min_object_points: continue
-
             output_dict = self.perform_registration(node_points_src, node_points_ref, gt_transform)
             if output_dict is None: continue
-
+            
+            output_dict = torch_util.release_cuda(output_dict)
             ref_corr_points = output_dict['ref_corr_points']
             src_corr_points = output_dict['src_corr_points']
             corr_scores = output_dict['corr_scores']
@@ -141,13 +149,13 @@ class RegistrationEvaluator(abc.ABC):
                 sel_indices = np.argsort(-corr_scores)[: self.num_p2p_corrs // len(node_corrs)]
                 ref_corr_points = ref_corr_points[sel_indices]
                 src_corr_points = src_corr_points[sel_indices]
-
+            
             point_corrs['src'].append(src_corr_points)
             point_corrs['ref'].append(ref_corr_points)
             point_corrs['scores'].append(corr_scores)
         
-        if len(point_corrs['src']) == 0 or len(point_corrs['ref']) == 0: return None
-        
+        # if len(point_corrs['src']) == 0 or len(point_corrs['ref']) == 0: return None
+
         point_corrs['src'] = np.concatenate(point_corrs['src'])
         point_corrs['ref'] = np.concatenate(point_corrs['ref'])
 
@@ -157,11 +165,20 @@ class RegistrationEvaluator(abc.ABC):
             corr_sel_indices = np.random.choice(corrs_ransac.shape[0], self.num_p2p_corrs)
             corrs_ransac = corrs_ransac[corr_sel_indices]
         
-        est_transform, _ = pygcransac.findRigidTransform(np.ascontiguousarray(corrs_ransac), probabilities = [], threshold = self.ransac_threshold, neighborhood_size = 4, 
-                                                         sampler = 1, min_iters = self.ransac_min_iters, max_iters = self.ransac_max_iters, spatial_coherence_weight = 0.0, 
-                                                         use_space_partitioning = not self.ransac_use_sprt, neighborhood = 0, conf = 0.999, use_sprt = self.ransac_use_sprt)
+        est_transform, _ = pygcransac.findRigidTransform(np.ascontiguousarray(corrs_ransac), probabilities = [], 
+                                                         threshold = self.ransac_threshold, neighborhood_size = 4, sampler = 1, 
+                                                         min_iters = self.ransac_min_iters, max_iters = self.ransac_max_iters, 
+                                                         spatial_coherence_weight = 0.0, 
+                                                         use_space_partitioning = not self.ransac_use_sprt, neighborhood = 0, conf = 0.999, 
+                                                         use_sprt = self.ransac_use_sprt)
         if est_transform is None: return None
-        chamfer_distance, inlier_ratio, rre, rte, recall, fmr = self.evaluate_registration(src_points, ref_points, raw_points, est_transform, gt_transform, corrs_ransac[:, 3:], corrs_ransac[:, :3], gt_src_corr_points, gt_ref_corr_points)
+        est_transform = est_transform.T
+        chamfer_distance, inlier_ratio, rre, rte, recall, fmr = self.evaluate_registration(src_points, ref_points, raw_points, 
+                                                                                               est_transform, gt_transform, 
+                                                                                               src_corr_points, ref_corr_points, 
+                                                                                               gt_src_corr_points, gt_ref_corr_points)
+        
+        if recall == 0.0: return None
         return {
             'CD' : chamfer_distance,
             'IR' : inlier_ratio,
@@ -173,8 +190,7 @@ class RegistrationEvaluator(abc.ABC):
 
     def run_registration(self, reg_data_dict):
         normal_reg_results_dict = self.run_normal_registration(reg_data_dict)
-
         if normal_reg_results_dict is None: return None, None
         aligner_reg_results_dict = self.run_aligner_registration(reg_data_dict)
-
+        
         return normal_reg_results_dict, aligner_reg_results_dict
