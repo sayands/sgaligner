@@ -250,7 +250,6 @@ def process_data(args, cfg):
     print(len(subscan_ids))
     np.savetxt(osp.join(data_write_dir, '{}_scans_subscenes.txt'.format(split)), subscan_ids, fmt='%s')
 
-
 def make_bow_vector(sentence, word_2_idx):
     # create a vector of zeros of vocab size = len(word_to_idx)
     vec = np.zeros(len(word_2_idx))
@@ -315,7 +314,7 @@ def calculate_bow_node_attr_feats(data_write_dir):
     scan_ids = os.listdir(osp.join(data_write_dir, 'data'))
     scan_ids = sorted([scan_id[:-4] for scan_id in scan_ids])
     
-    word_2_ix = {}
+    word_2_ix = common.load_pkl_data(define.OBJ_ATTR_FILENAME)
     for scan_id in tqdm(scan_ids):
         data_dict_filename = osp.join(data_write_dir, 'data', '{}.pkl'.format(scan_id))
         data_dict = common.load_pkl_data(data_dict_filename)
@@ -325,7 +324,6 @@ def calculate_bow_node_attr_feats(data_write_dir):
             for attr in object_attr:
                 if attr not in word_2_ix:
                     word_2_ix[attr] = len(word_2_ix)
-    common.write_pkl_data(word_2_ix, osp.join( '/'.join(data_write_dir.split('/')[:-1]), 'obj_attr.pkl'))
 
     print('[INFO] Size of Node Attribute Vocabulary - {}'.format(len(word_2_ix)))
     print('[INFO] Generated Vocabulary, Calculating BOW Features...')

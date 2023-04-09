@@ -42,7 +42,7 @@ def get_print_format(value):
         return '.3e'
     if value < 1e-3:
         return '.6f'
-    return '.3f'
+    return '.6f'
 
 
 def get_format_strings(kv_pairs):

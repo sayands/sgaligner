@@ -22,7 +22,7 @@ def make_parser():
     parser = argparse.ArgumentParser()
     return parser
 
-class Tester(SingleTester):
+class AlignerOverlapper(SingleTester):
     def __init__(self, cfg):
         super().__init__(cfg, parser=make_parser())
 
@@ -130,7 +130,7 @@ class Tester(SingleTester):
 
 def main():
     cfg = config_scan3r_gt_w_wo_overlap.make_cfg()
-    tester = Tester(cfg)
+    tester = AlignerOverlapper(cfg)
     tester.run()
 
 if __name__ == '__main__':

@@ -21,7 +21,7 @@ def make_parser():
     parser = argparse.ArgumentParser()
     return parser
 
-class Tester(SingleTester):
+class AlignerRegTester(SingleTester):
     def __init__(self, cfg):
         super().__init__(cfg, parser=make_parser())
 
@@ -132,12 +132,13 @@ class Tester(SingleTester):
                     self.alignment_metrics_meter[k]['total'] += total
                 
                 if self.run_reg:
-                    node_corrs = alignment.compute_node_corrs(rank_list, e1i_idxs, src_objects_count, self.reg_k)
+                    node_corrs = alignment.compute_node_corrs(rank_list, src_objects_count, self.reg_k)
                     node_corrs = alignment.get_node_corrs_objects_ids(node_corrs, all_objects_ids, curr_total_objects_count)
-
+                    
                     # Load subscene points
                     src_scan_id = data_dict['scene_ids'][batch_idx][0]
                     ref_scan_id = data_dict['scene_ids'][batch_idx][1]
+                    overlap = data_dict['overlap'][batch_idx]
                     scan_id = src_scan_id[:src_scan_id.index('_')]
 
                     src_points, src_plydata = scan3r.load_plydata_npy(osp.join(self.test_dataset.subscans_scenes_dir, src_scan_id, 'data.npy'), obj_ids=None, return_ply_data=True)
@@ -176,7 +177,7 @@ class Tester(SingleTester):
         
 def main():
     cfg = make_cfg()
-    tester = Tester(cfg)
+    tester = AlignerRegTester(cfg)
     tester.run()
 
 if __name__ == '__main__':

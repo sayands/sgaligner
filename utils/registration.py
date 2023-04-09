@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.spatial.transform import Rotation
+import open3d as o3d
 
 import sys
 sys.path.append('..')
@@ -102,3 +103,41 @@ def compute_registration_error(gt_transform: np.ndarray, est_transform: np.ndarr
     rte = compute_relative_translation_error(gt_translation, est_translation)
     
     return rre, rte
+
+def nn_correspondence(verts1, verts2):
+    """ for each vertex in verts2 find the nearest vertex in verts1
+    Args:
+        nx3 np.array's
+    Returns:
+        ([indices], [distances])
+    """
+
+    indices = []
+    distances = []
+    if len(verts1) == 0 or len(verts2) == 0:
+        return indices, distances
+
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(verts1)
+    kdtree = o3d.geometry.KDTreeFlann(pcd)
+
+    for vert in verts2:
+        _, inds, dist = kdtree.search_knn_vector_3d(vert, 1)
+        indices.append(inds[0])
+        distances.append(np.sqrt(dist[0]))
+
+    return indices, distances
+
+def compute_mosaicking_error(verts_pred, verts_gt, threshold=0.05):
+    _, dist1 = nn_correspondence(verts_pred, verts_gt)
+    _, dist2 = nn_correspondence(verts_gt, verts_pred)
+
+    dist1 = np.array(dist1)
+    dist2 = np.array(dist2)
+
+    precision = np.mean((dist2 < threshold).astype('float'))
+    recall = np.mean((dist1 < threshold).astype('float'))
+    f1_score = 2 * precision * recall / (precision + recall)
+
+    result_dict = {'prec' : precision, 'recall' : recall, 'acc' : np.mean(dist1), 'comp' : np.mean(dist2), 'fscore' : f1_score}
+    return result_dict

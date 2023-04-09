@@ -115,20 +115,20 @@ class RegistrationEvaluator(abc.ABC):
             }
         
         else:
-            return mean_corr_score
+            return est_transform, mean_corr_score
     
-    def run_aligner_registration(self, reg_data_dict):
+    def run_aligner_registration(self, reg_data_dict, evaluate_registration=True):
         node_corrs = reg_data_dict['node_corrs']
         src_points = reg_data_dict['src_points']
         ref_points = reg_data_dict['ref_points']
-        raw_points = reg_data_dict['raw_points']
+        raw_points = reg_data_dict['raw_points'] if 'raw_points' in reg_data_dict else None
 
         src_plydata = reg_data_dict['src_plydata'] 
         ref_plydata = reg_data_dict['ref_plydata']
 
         gt_transform = reg_data_dict['gt_transform']
-        gt_src_corr_points = reg_data_dict['gt_src_corr_points']
-        gt_ref_corr_points = reg_data_dict['gt_ref_corr_points']
+        gt_src_corr_points = reg_data_dict['gt_src_corr_points'] if 'gt_src_corr_points' in reg_data_dict else None
+        gt_ref_corr_points = reg_data_dict['gt_ref_corr_points'] if 'gt_ref_corr_points' in reg_data_dict else None
 
         point_corrs = {'src' : [], 'ref' : [], 'scores' : []}
 
@@ -150,12 +150,13 @@ class RegistrationEvaluator(abc.ABC):
                 ref_corr_points = ref_corr_points[sel_indices]
                 src_corr_points = src_corr_points[sel_indices]
             
+            # print(src_corr_points.shape, ref_corr_points.shape, node_corr)
             point_corrs['src'].append(src_corr_points)
             point_corrs['ref'].append(ref_corr_points)
             point_corrs['scores'].append(corr_scores)
         
-        # if len(point_corrs['src']) == 0 or len(point_corrs['ref']) == 0: return None
-
+        if len(point_corrs['src']) == 0 or len(point_corrs['ref']) == 0: return None
+        
         point_corrs['src'] = np.concatenate(point_corrs['src'])
         point_corrs['ref'] = np.concatenate(point_corrs['ref'])
 
@@ -173,11 +174,14 @@ class RegistrationEvaluator(abc.ABC):
                                                          use_sprt = self.ransac_use_sprt)
         if est_transform is None: return None
         est_transform = est_transform.T
+
+        if not evaluate_registration: return est_transform
+
         chamfer_distance, inlier_ratio, rre, rte, recall, fmr = self.evaluate_registration(src_points, ref_points, raw_points, 
-                                                                                               est_transform, gt_transform, 
-                                                                                               src_corr_points, ref_corr_points, 
-                                                                                               gt_src_corr_points, gt_ref_corr_points)
-        
+                                                                                            est_transform, gt_transform, 
+                                                                                            src_corr_points, ref_corr_points, 
+                                                                                            gt_src_corr_points, gt_ref_corr_points)
+    
         if recall == 0.0: return None
         return {
             'CD' : chamfer_distance,

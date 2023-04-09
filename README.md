@@ -12,7 +12,7 @@ SGAligner aligns 3D scene graphs of environments using multi-modal learning and 
 
 ## News :newspaper:
 
-* **10. April 2023**: Code + [SGAligner Preprint]() released on arXiv.
+* **10. April 2023**: Code released.
 
 ## Code Structure :clapper:
 
@@ -50,11 +50,14 @@ conda env create -f req.yml
 
 Please follow the submodule for additional installation requirements and setup of [GeoTransformer](https://github.com/sayands/GeoTransformer).
 
+### Downloads :droplet:
+The pre-trained model and other meta files are available [here](https://drive.google.com/drive/folders/1elqdbYD5T2686r42lcUHE6SyiFnDsZur?usp=sharing).
+
 ### Data + Benchmark :hammer:
 After installing the dependencies, we preprocess the datasets and provide the benchmarks. 
 
 #### Subscan Pair Generation - 3RScan + 3DSSG
-Download [3RScan](https://github.com/WaldJohannaU/3RScan) and [3DSSG](https://3dssg.github.io/). Move all files of 3DSSG to a new directory within Scan3R. The structure should be:
+Download [3RScan](https://github.com/WaldJohannaU/3RScan) and [3DSSG](https://3dssg.github.io/). Move all files of 3DSSG to a new ``files/`` directory within Scan3R. The structure should be:
 
 ```
 ├── 3RScan
@@ -78,12 +81,12 @@ To generate overlapping and non-overlapping pairs, use :
 ```bash
 python data-preprocessing/gen_all_pairs_fileset.py
 ```
-This will create a fileset with the same number of non-overlapping pairs as overlapping pairs generated before during subscan generation.
+This will create a fileset with the same number of randomly chosen non-overlapping pairs from the generated subscans as overlapping pairs generated before during subscan generation.
 
 Usage on **Predicted Scene Graphs** : Coming Soon! 
 
 ### Training :bullettrain_side:
-To train SGAligner, you can use :
+To train SGAligner on 3RScan subscans generated from [here](#Data-+-Benchmark), you can use :
 
 ```bash
 cd src
@@ -109,6 +112,28 @@ cd src
 python inference/inference_find_overlapper.py --snapshot <path to SGAligner trained model> --reg_snapshot <path to GeoTransformer model trained on 3DMatch>
 ```
 
+#### 3D Point Cloud Mosaicking
+First, we generate the subscans per 3RScan scan using : 
+
+```bash
+python data-preprocessing/gen_scan_subscan_mapping.py --split <the split you want to generate the mapping for>
+```
+
+And then, to run the inference, you need to:
+
+```bash
+cd src
+python inference/inference_mosaicking.py --snapshot <path to SGAligner trained model> --reg_snapshot <path to GeoTransformer model trained on 3DMatch>
+```
+
+## TODO :soon:
+- [X] Add 3D Point Cloud Mosaicking
+- [ ] Add visualisation for registration results
+- [ ] Add usage on Predicted Scene Graphs
+- [ ] Add scene graph alignment of local 3D scenes to prior 3D maps
+- [ ] Add overlapping scene finder with a traditional retrieval method (FPFH + VLAD + KNN)
+
+
 ## BibTeX :pray:
 ```
 @article{,
@@ -118,12 +143,14 @@ python inference/inference_find_overlapper.py --snapshot <path to SGAligner trai
   year      = {}
 }
 ```
+## Acknowledgments :recycle:
+In this project we use (parts of) the official implementations of the following works and thank the respective authors for open sourcing their methods: 
 
-### TODO
-- [ ] Add usage on Predicted Scene Graphs
-- [ ] Provide a script to port the predicted scene graphs to the ground truth 3RScan format.
-- [ ] Add visualisation to registration results
-- [ ] Add 3D Point Cloud Mosaicking
+- [SceneGraphFusion](https://github.com/ShunChengWu/3DSSG) (3RScan Dataloader)
+- [GeoTransformer](https://github.com/qinzheng93/GeoTransformer) (Registration)
+- [MCLEA](https://github.com/lzxlin/MCLEA) (Alignment)
+
+ We thank the respective authors for open sourcing their methods.
 
 
 [//]: <> (We also show results on sub-scans generated using predicted scene graphs, please refer to the 3DSSG repository for the graph prediction process.)
