@@ -86,7 +86,7 @@ This will create a fileset with the same number of randomly chosen non-overlappi
 Usage on **Predicted Scene Graphs** : Coming Soon! 
 
 ### Training :bullettrain_side:
-To train SGAligner on 3RScan subscans generated from [here](#Data-+-Benchmark), you can use :
+To train SGAligner on 3RScan subscans generated from [here](#data--benchmark-hammer), you can use :
 
 ```bash
 cd src
@@ -127,7 +127,7 @@ python inference/inference_mosaicking.py --snapshot <path to SGAligner trained m
 ```
 
 ## TODO :soon:
-- [X] Add 3D Point Cloud Mosaicking
+- [X] ~~Add 3D Point Cloud Mosaicking~~
 - [ ] Add visualisation for registration results
 - [ ] Add usage on Predicted Scene Graphs
 - [ ] Add scene graph alignment of local 3D scenes to prior 3D maps
@@ -149,9 +149,3 @@ In this project we use (parts of) the official implementations of the following 
 - [SceneGraphFusion](https://github.com/ShunChengWu/3DSSG) (3RScan Dataloader)
 - [GeoTransformer](https://github.com/qinzheng93/GeoTransformer) (Registration)
 - [MCLEA](https://github.com/lzxlin/MCLEA) (Alignment)
-
- We thank the respective authors for open sourcing their methods.
-
-
-[//]: <> (We also show results on sub-scans generated using predicted scene graphs, please refer to the 3DSSG repository for the graph prediction process.)
-
