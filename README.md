@@ -73,7 +73,7 @@ First, we create sub-scans from each 3RScan scan using the ground truth scene Gr
 ```bash
 bash scripts/generate_data_scan3r_gt.sh
 ```
-To adhere to our evaluation procedure, please do not change the seed value in the files in ``configs/`` directory. 
+> __Note__ To adhere to our evaluation procedure, please do not change the seed value in the files in ``configs/`` directory. 
 
 #### Generating Overlapping and Non-Overlapping Subscan Pairs
 To generate overlapping and non-overlapping pairs, use : 

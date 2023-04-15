@@ -97,7 +97,6 @@ class IALLoss(nn.Module):
         loss = self.zoom * (self.alpha * loss_a + (1-self.alpha) * loss_b)
         return loss
 
-
 class OverallLoss(nn.Module):
     def __init__(self, ial_loss_layer, icl_loss_layer, device, metadata):
         super(OverallLoss, self).__init__()
@@ -144,3 +143,30 @@ class OverallLoss(nn.Module):
             'icl_loss_multimodal' : constastive_loss_multimodal,
             'ial_loss': total_align_loss,
         }
+
+class NCALoss(nn.Module):
+    def __init__(self, alpha, beta, ep, device):
+        super(NCALoss, self).__init__()
+        self.alpha = alpha
+        self.beta = beta
+        self.ep = ep
+        self.device = device
+    
+    def forward(self, emb, src_idxs, ref_idxs):
+        emb = F.normalize(emb, dim=1)
+
+        src_emb = emb[src_idxs]
+        ref_emb = emb[ref_idxs]
+
+        batch_size = src_emb.size()[0]
+        scores = src_emb.mm(ref_emb.t())
+        tmp = torch.eye(batch_size).to(self.device)
+        
+        S_diag = tmp * scores
+        S_ = torch.exp(self.alpha * (scores - self.ep))
+        S_ = S_ - S_ * tmp # clear diagonal
+
+        loss_diag = - torch.log(1 + F.relu(S_diag.sum(0)))
+        loss = torch.log(1 + S_.sum(0)) / self.alpha + torch.log(1 + S_.sum(1)) / self.alpha + self.beta * loss_diag
+        loss /= batch_size
+        return {'loss' : loss}
