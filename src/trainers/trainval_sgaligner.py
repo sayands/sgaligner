@@ -2,6 +2,10 @@ import argparse
 import time
 
 import torch.optim as optim
+
+import sys
+sys.path.append('.')
+
 from engine import EpochBasedTrainer
 from datasets.loaders import get_train_val_data_loader
 from aligner.sg_aligner import *
@@ -66,15 +70,11 @@ class Trainer(EpochBasedTrainer):
     def train_step(self, epoch, iteration, data_dict):
         output_dict = self.model(data_dict)
         loss_dict = self.loss_func(output_dict, data_dict)
-        # result_dict = self.evaluator(output_dict, data_dict)
-        # loss_dict.update(result_dict)
         return output_dict, loss_dict
 
     def val_step(self, epoch, iteration, data_dict):
         output_dict = self.model(data_dict)
         loss_dict = self.loss_func(output_dict, data_dict)
-        # result_dict = self.evaluator(output_dict, data_dict)
-        # loss_dict.update(result_dict)
         return output_dict, loss_dict
 
     def set_eval_mode(self):

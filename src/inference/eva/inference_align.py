@@ -7,6 +7,7 @@ import numpy as np
 import sys
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(parent_dir)
+sys.path.append('.')
 
 from engine.single_tester import SingleTester
 from utils import torch_util

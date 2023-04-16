@@ -90,7 +90,7 @@ To train SGAligner on 3RScan subscans generated from [here](#data--benchmark-ham
 
 ```bash
 cd src
-python trainval.py
+python trainers/trainval_sgaligner.py
 ```
 We provide config files for the corresponding data in ``config/`` directory. Please change the parameters in the configuration files, if you want to tune the hyper-parameters.
 
@@ -99,7 +99,7 @@ We provide config files for the corresponding data in ``config/`` directory. Ple
 
 ```bash
 cd src
-python inference/inference_align_reg.py --snapshot <path to SGAligner trained model> --reg_snapshot <path to GeoTransformer model trained on 3DMatch>
+python inference/sgaligner/inference_align_reg.py --snapshot <path to SGAligner trained model> --reg_snapshot <path to GeoTransformer model trained on 3DMatch>
 ```
 
 #### Finding Overlapping vs Non-Overlapping Pairs
@@ -109,7 +109,7 @@ To run the inference, you need to:
 
 ```bash
 cd src
-python inference/inference_find_overlapper.py --snapshot <path to SGAligner trained model> --reg_snapshot <path to GeoTransformer model trained on 3DMatch>
+python inference/sgaligner/inference_find_overlapper.py --snapshot <path to SGAligner trained model> --reg_snapshot <path to GeoTransformer model trained on 3DMatch>
 ```
 
 #### 3D Point Cloud Mosaicking
@@ -123,11 +123,12 @@ And then, to run the inference, you need to:
 
 ```bash
 cd src
-python inference/inference_mosaicking.py --snapshot <path to SGAligner trained model> --reg_snapshot <path to GeoTransformer model trained on 3DMatch>
+python inference/sgaligner/inference_mosaicking.py --snapshot <path to SGAligner trained model> --reg_snapshot <path to GeoTransformer model trained on 3DMatch>
 ```
 
 ## TODO :soon:
 - [X] ~~Add 3D Point Cloud Mosaicking~~
+- [X] ~~Add Support For [EVA](https://github.com/cambridgeltl/eva)~~
 - [ ] Add visualisation for registration results
 - [ ] Add usage on Predicted Scene Graphs
 - [ ] Add scene graph alignment of local 3D scenes to prior 3D maps
