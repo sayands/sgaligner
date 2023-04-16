@@ -25,9 +25,9 @@ SGAligner aligns 3D scene graphs of environments using multi-modal learning and 
 │   │   │── datasets                  <- dataloader for 3RScan subscans
 │   │   │── engine                    <- trainer classes
 │   │   │── GeoTransformer            <- geotransformer submodule for registration
-│   │   │── inference                 <- inference files for the downstream applications
-│   │   │── trainval.py               <- train loop
-│   │── utils                         <- utils
+│   │   │── inference                 <- inference files for alignment + downstream applications
+│   │   │── trainers                  <- train + validation loop (EVA + SGAligner)
+│   │── utils                         <- util functions
 │   │── README.md                    
 │   │── scripts                       <- bash scripts for data generation + preprocesing + training
 │   └── output                        <- folder that stores models and logs
