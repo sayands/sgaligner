@@ -12,6 +12,7 @@ _C.seed = 42
 _C.num_workers = 4
 
 # path params
+_C.model_name = 'sgaligner'
 _C.data_dir = define.SCAN3R_PREDICTED_DIR
 _C.label_file_name = define.LABEL_FILE_NAME_PRED
 _C.predicted_sg = True

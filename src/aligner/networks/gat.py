@@ -16,8 +16,9 @@ class MultiGCN(nn.Module):
         self.layer_stack = nn.ModuleList(layer_stack)
     
     def forward(self, x, edges):
+        edges = edges.long()
         for idx, gcn_layer in enumerate(self.layer_stack):
-            x = gcn_layer(x, edges)
+            x = gcn_layer(x=x, edge_index=edges)
             if idx+1 < self.num_layers:
                 x = F.relu(x)
                 x = F.dropout(x, self.dropout, training=self.training)
@@ -56,7 +57,7 @@ if __name__ == '__main__':
     # out_head = 1
     numFeatures = 3
     
-    x = torch.randn((10, numFeatures))
+    x = torch.randn((19, numFeatures))
     edges = torch.Tensor([[1, 2], [2, 3], [1, 3]])
     edges = torch.transpose(edges, 0, 1).to(torch.int64)
 

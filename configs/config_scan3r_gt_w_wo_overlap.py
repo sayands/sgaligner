@@ -13,6 +13,7 @@ _C.seed = 42
 _C.num_workers = 4
 
 # path params
+_C.model_name = 'sgaligner'
 _C.data_dir = define.SCAN3R_ORIG_DIR
 _C.label_file_name = define.LABEL_FILE_NAME_GT
 _C.predicted_sg = False
@@ -21,7 +22,7 @@ _C.registration = True
 _C.working_dir = osp.dirname(osp.abspath(__file__))
 _C.root_dir = osp.dirname(_C.working_dir)
 _C.exp_name = '_'.join(_C.modules)
-_C.output_dir = osp.join(_C.root_dir, 'output', _C.exp_name)
+_C.output_dir = osp.join(_C.root_dir, 'output', _C.model_name, _C.exp_name)
 _C.snapshot_dir = osp.join(_C.output_dir, 'snapshots')
 _C.log_dir = osp.join(_C.output_dir, 'logs')
 _C.event_dir = osp.join(_C.output_dir, 'events')

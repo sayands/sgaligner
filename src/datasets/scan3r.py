@@ -15,6 +15,7 @@ class Scan3RDataset(data.Dataset):
         self.split = split
         self.pc_resolution = cfg.val.pc_res if split == 'val' else cfg.train.pc_res
         self.anchor_type_name = cfg.data.anchor_type_name
+        self.model_name = cfg.model_name
 
         self.scans_dir = osp.join(cfg.data_dir)
         self.scans_scenes_dir = osp.join(self.scans_dir, 'scenes')
@@ -94,7 +95,6 @@ class Scan3RDataset(data.Dataset):
         e2i_idxs = np.array([ref_object_id2idx[anchor_obj_id] for anchor_obj_id in anchor_obj_ids]) + src_object_points.shape[0] # e2i
         e2j_idxs = np.array([ref_object_id2idx[object_id] for object_id in ref_data_dict['objects_id'] if object_id not in anchor_obj_ids]) + src_object_points.shape[0] # e2j
 
-        
         tot_object_points = torch.cat([torch.from_numpy(src_object_points), torch.from_numpy(ref_object_points)]).type(torch.FloatTensor)
         tot_bow_vec_obj_attr_feats = torch.cat([torch.from_numpy(src_data_dict['bow_vec_object_attr_feats']), torch.from_numpy(ref_data_dict['bow_vec_object_attr_feats'])])
         tot_bow_vec_obj_edge_feats = torch.cat([torch.from_numpy(src_data_dict['bow_vec_object_edge_feats']), torch.from_numpy(ref_data_dict['bow_vec_object_edge_feats'])])
@@ -103,6 +103,9 @@ class Scan3RDataset(data.Dataset):
         data_dict = {} 
         data_dict['obj_ids'] = np.concatenate([src_object_ids, ref_object_ids])
         data_dict['tot_obj_pts'] = tot_object_points
+        data_dict['graph_per_obj_count'] = np.array([src_object_points.shape[0], ref_object_points.shape[0]])
+        data_dict['graph_per_edge_count'] = np.array([src_edges.shape[0], ref_edges.shape[0]])
+        
         data_dict['e1i'] = e1i_idxs
         data_dict['e1i_count'] = e1i_idxs.shape[0]
         data_dict['e2i'] = e2i_idxs
@@ -111,15 +114,15 @@ class Scan3RDataset(data.Dataset):
         data_dict['e1j_count'] = e1j_idxs.shape[0]
         data_dict['e2j'] = e2j_idxs
         data_dict['e2j_count'] = e2j_idxs.shape[0]
+        
         data_dict['tot_obj_count'] = tot_object_points.shape[0]
-        data_dict['graph_per_obj_count'] = np.array([src_object_points.shape[0], ref_object_points.shape[0]])
-        data_dict['graph_per_edge_count'] = np.array([src_edges.shape[0], ref_edges.shape[0]])
         data_dict['tot_bow_vec_object_attr_feats'] = tot_bow_vec_obj_attr_feats
         data_dict['tot_bow_vec_object_edge_feats'] = tot_bow_vec_obj_edge_feats
         data_dict['tot_rel_pose'] = tot_rel_pose
         data_dict['edges'] = edges    
+
         data_dict['global_obj_ids'] = global_object_ids
-        data_dict['scene_ids'] = [src_scan_id, ref_scan_id]
+        data_dict['scene_ids'] = [src_scan_id, ref_scan_id]        
         data_dict['pcl_center'] = pcl_center
         data_dict['overlap'] = overlap
         

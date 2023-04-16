@@ -13,12 +13,12 @@ _C.seed = 42
 _C.num_workers = 4
 
 # path params
-_C.model_name = 'sgaligner'
+_C.model_name = 'eva'
 _C.data_dir = define.SCAN3R_ORIG_DIR
 _C.label_file_name = define.LABEL_FILE_NAME_GT
 _C.predicted_sg = False
-_C.modules = ['gat', 'point', 'rel', 'attr']
-_C.registration = False
+_C.modules = ['gcn', 'point', 'rel', 'attr']
+_C.registration = True
 _C.working_dir = osp.dirname(osp.abspath(__file__))
 _C.root_dir = osp.dirname(_C.working_dir)
 _C.exp_name = '_'.join(_C.modules)
@@ -72,12 +72,6 @@ _C.optim.lr_decay_steps = 1
 _C.optim.weight_decay = 1e-6
 _C.optim.max_epoch = 50
 _C.optim.grad_acc_steps = 1
-
-# loss
-_C.loss = edict()
-_C.loss.alignment_loss_weight = 1.0
-_C.loss.constrastive_loss_weight = 1.0
-_C.loss.zoom = 0.1
 
 # registration model params
 _C.reg_model = edict()

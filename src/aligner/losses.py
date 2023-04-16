@@ -70,7 +70,6 @@ class IALLoss(nn.Module):
         srcEmb : joint embedding
         ref_emb : modal embedding
         '''
-
         src_emb = F.normalize(src_emb, dim=1)
         ref_emb = F.normalize(ref_emb, dim=1)
 
@@ -145,28 +144,54 @@ class OverallLoss(nn.Module):
         }
 
 class NCALoss(nn.Module):
-    def __init__(self, alpha, beta, ep, device):
+    def __init__(self, alpha, beta, ep):
         super(NCALoss, self).__init__()
         self.alpha = alpha
         self.beta = beta
         self.ep = ep
-        self.device = device
     
-    def forward(self, emb, src_idxs, ref_idxs):
-        emb = F.normalize(emb, dim=1)
-
-        src_emb = emb[src_idxs]
-        ref_emb = emb[ref_idxs]
-
+    def forward(self, src_emb, ref_emb):
         batch_size = src_emb.size()[0]
         scores = src_emb.mm(ref_emb.t())
-        tmp = torch.eye(batch_size).to(self.device)
-        
+        tmp = torch.eye(batch_size).to(src_emb.device)
+
         S_diag = tmp * scores
         S_ = torch.exp(self.alpha * (scores - self.ep))
         S_ = S_ - S_ * tmp # clear diagonal
 
-        loss_diag = - torch.log(1 + F.relu(S_diag.sum(0)))
-        loss = torch.log(1 + S_.sum(0)) / self.alpha + torch.log(1 + S_.sum(1)) / self.alpha + self.beta * loss_diag
-        loss /= batch_size
-        return {'loss' : loss}
+        loss_diag = -torch.log(1 + F.relu(S_diag.sum(0)))       
+        loss = (torch.log(1 + S_.sum(0)) / self.alpha).mean() + (torch.log(1 + S_.sum(1)) / self.alpha).mean() + (self.beta * loss_diag).mean()
+
+        return loss
+
+class OverallNCALoss(nn.Module):
+    def __init__(self, modules, device):
+        super(OverallNCALoss, self).__init__()
+
+        self.device = device
+        self.criterion_dict = {}
+        for module in modules:
+            self.criterion_dict[module] = NCALoss(alpha=1, beta=1, ep=0.0) 
+            
+        self.criterion_dict['joint'] = NCALoss(alpha=1, beta=1, ep=0.0)
+
+    def forward(self, output_dict, data_dict):
+        loss_dict = {}
+        for module in output_dict.keys():
+            emb = output_dict[module]
+            emb = F.normalize(emb)
+
+            e1i_idxs = data_dict['e1i']
+            e2i_idxs = data_dict['e2i']
+
+            emb_e1i = emb[e1i_idxs]
+            emb_e2i = emb[e2i_idxs]
+
+            loss_dict[module] = self.criterion_dict[module](emb_e1i, emb_e2i)
+
+        loss_sum  = 0
+        for module in loss_dict.keys():
+            loss_sum += loss_dict[module]
+        
+        loss_dict['loss'] = loss_sum
+        return loss_dict
