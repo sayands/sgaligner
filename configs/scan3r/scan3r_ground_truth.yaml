@@ -1,8 +1,9 @@
 seed: 42
 num_workers : 4
 
-model_name : 'sgaligner'
-modules    : ['gat', 'point', 'rel', 'attr']
+model_name   : 'sgaligner'
+modules      : ['gat', 'point', 'rel', 'attr']
+registration : True
 
 data :
   name            : Scan3R

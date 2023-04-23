@@ -10,6 +10,7 @@ _C.seed = 42
 _C.num_workers = 4
 _C.model_name = ''
 _C.modules = []
+_C.registration = True
 
 # path params
 _C.data = CN()

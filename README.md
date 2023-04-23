@@ -90,8 +90,18 @@ To train SGAligner on 3RScan subscans generated from [here](#data--benchmark-ham
 
 ```bash
 cd src
-python trainers/trainval_sgaligner.py
+python trainers/trainval_sgaligner.py --config ../configs/scan3r/scan3r_ground_truth.yaml
 ```
+
+#### EVA Training
+We also provide training scripts for [EVA](https://arxiv.org/abs/2009.13603), used as a baseline after being adapted for scene graph alignment. To train EVA similar to SGAligner on the same data, you can use :
+
+```bash
+cd src
+python trainers/trainval_eva.py --config ../configs/scan3r/scan3r_eva.yaml
+```
+
+
 We provide config files for the corresponding data in ``config/`` directory. Please change the parameters in the configuration files, if you want to tune the hyper-parameters.
 
 ### Evaluation :vertical_traffic_light:
