@@ -14,17 +14,13 @@ from engine.registration_evaluator import RegistrationEvaluator
 from utils import torch_util, scan3r
 from aligner.sg_aligner import *
 from datasets.loaders import get_val_dataloader
-from configs.config_scan3r_gt import make_cfg
+from configs import config, update_config
 from utils import alignment, common, point_cloud
 from GeoTransformer.config import make_cfg as make_cfg_reg
 
-def make_parser():
-    parser = argparse.ArgumentParser()
-    return parser
-
 class AlignerRegTester(SingleTester):
-    def __init__(self, cfg):
-        super().__init__(cfg, parser=make_parser())
+    def __init__(self, cfg, parser):
+        super().__init__(cfg, parser=parser)
 
         self.run_reg = cfg.registration
 
@@ -177,9 +173,22 @@ class AlignerRegTester(SingleTester):
         return { 'alignment_metrics' : self.alignment_metrics_meter, 'normal_registration_metrics' : self.normal_registration_metrics_meter,
                 'aligner_registration_metrics' : self.aligner_registration_metrics_meter }
         
+def parse_args(parser=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', dest='config', default='', type=str, help='configuration file name')
+    parser.add_argument('--snapshot', default=None, help='load from snapshot')
+    parser.add_argument('--test_epoch', type=int, default=None, help='test epoch')
+    parser.add_argument('--test_iter', type=int, default=None, help='test iteration')
+    parser.add_argument('--reg_snapshot', default=None, help='load from snapshot')
+
+    args = parser.parse_args()
+    return parser, args
+    
 def main():
-    cfg = make_cfg()
-    tester = AlignerRegTester(cfg)
+    parser, args = parse_args()
+    cfg = update_config(config, args.config)
+
+    tester = AlignerRegTester(cfg, parser)
     tester.run()
 
 if __name__ == '__main__':

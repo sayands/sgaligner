@@ -13,16 +13,12 @@ from engine.single_tester import SingleTester
 from utils import torch_util
 from aligner.eva import *
 from datasets.loaders import get_val_dataloader
-from configs.config_scan3r_eva import make_cfg
+from configs import config, update_config
 from utils import alignment, common, point_cloud
 
-def make_parser():
-    parser = argparse.ArgumentParser()
-    return parser
-
 class EVATester(SingleTester):
-    def __init__(self, cfg):
-        super().__init__(cfg, parser=make_parser())
+    def __init__(self, cfg, parser):
+        super().__init__(cfg, parser=parser)
         # Model Specific params
         self.modules = cfg.modules
         self.rel_dim = cfg.model.rel_dim
@@ -126,10 +122,23 @@ class EVATester(SingleTester):
             
         return { 'alignment_metrics' : self.alignment_metrics_meter, 'normal_registration_metrics' : self.normal_registration_metrics_meter,
                 'aligner_registration_metrics' : self.aligner_registration_metrics_meter }
-        
+
+def parse_args(parser=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', dest='config', default='', type=str, help='configuration file name')
+    parser.add_argument('--snapshot', default=None, help='load from snapshot')
+    parser.add_argument('--test_epoch', type=int, default=None, help='test epoch')
+    parser.add_argument('--test_iter', type=int, default=None, help='test iteration')
+    parser.add_argument('--reg_snapshot', default=None, help='load from snapshot')
+
+    args = parser.parse_args()
+    return parser, args
+    
 def main():
-    cfg = make_cfg()
-    tester = EVATester(cfg)
+    parser, args = parse_args()
+    cfg = update_config(config, args.config, ensure_dir=True)
+
+    tester = EVATester(cfg, parser)
     tester.run()
 
 if __name__ == '__main__':

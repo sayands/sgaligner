@@ -11,7 +11,7 @@ from datasets.loaders import get_train_val_data_loader
 from aligner.eva import *
 from aligner.losses import OverallNCALoss
 
-from configs.config_scan3r_eva import make_cfg
+from configs import update_config, config
 
 class EVATrainer(EpochBasedTrainer):
     def __init__(self, cfg):
@@ -71,8 +71,16 @@ class EVATrainer(EpochBasedTrainer):
         self.model.train()
         torch.set_grad_enabled(True)
 
+def parse_args(parser=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', dest='config', default='', type=str, help='configuration file name')
+
+    args = parser.parse_args()
+    return parser, args
+    
 def main():
-    cfg = make_cfg()
+    _, args = parse_args()
+    cfg = update_config(config, args.config)
     trainer = EVATrainer(cfg)
     trainer.run()
 

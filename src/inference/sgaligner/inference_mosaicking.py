@@ -14,12 +14,8 @@ from engine.registration_evaluator import RegistrationEvaluator
 from utils import torch_util
 from aligner.sg_aligner import *
 from datasets.loaders import get_val_dataloader
-from configs import config_scan3r_gt_mosaicking
+from configs import config, update_config
 from utils import common, define, scan3r, alignment, open3d, registration
-
-def make_parser():
-    parser = argparse.ArgumentParser()
-    return parser
 
 def load_subscan_pair(src_scan_id, ref_scan_id, mode='orig', pc_res=512):
     # Centering
@@ -70,8 +66,8 @@ def load_subscan_pair(src_scan_id, ref_scan_id, mode='orig', pc_res=512):
     return data_dict
 
 class MosaickTester(SingleTester):
-    def __init__(self, cfg):
-        super().__init__(cfg, parser=make_parser())
+    def __init__(self, cfg, parser):
+        super().__init__(cfg, parser=parser)
 
         self.run_reg = cfg.registration
 
@@ -214,9 +210,21 @@ class MosaickTester(SingleTester):
         results_dict['normal_mosaicking_metrics'] = self.metrics['normal_mosaicking_metrics']
         self.print_metrics(results_dict)
 
+def parse_args(parser=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', dest='config', default='', type=str, help='configuration file name')
+    parser.add_argument('--snapshot', default=None, help='load from snapshot')
+    parser.add_argument('--test_epoch', type=int, default=None, help='test epoch')
+    parser.add_argument('--test_iter', type=int, default=None, help='test iteration')
+    parser.add_argument('--reg_snapshot', default=None, help='load from snapshot')
+
+    args = parser.parse_args()
+    return parser, args
+    
 def main():
-    cfg = config_scan3r_gt_mosaicking.make_cfg()
-    tester = MosaickTester(cfg)
+    parser, args = parse_args()
+    cfg = update_config(config, args.config)
+    tester = MosaickTester(cfg, parser)
     tester.eval()
 
 if __name__ == '__main__':

@@ -11,7 +11,7 @@ from datasets.loaders import get_train_val_data_loader
 from aligner.sg_aligner import *
 from aligner.losses import *
 
-from configs.config_scan3r_gt import make_cfg
+from configs import config, update_config
 
 class Trainer(EpochBasedTrainer):
     def __init__(self, cfg):
@@ -91,8 +91,16 @@ class Trainer(EpochBasedTrainer):
         self.multi_loss_layer_icl.train()
         torch.set_grad_enabled(True)
 
+def parse_args(parser=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', dest='config', default='', type=str, help='configuration file name')
+
+    args = parser.parse_args()
+    return parser, args
+
 def main():
-    cfg = make_cfg()
+    _, args = parse_args()
+    cfg = update_config(config, args.config)
     trainer = Trainer(cfg)
     trainer.run()
 

@@ -11,19 +11,9 @@ from utils import torch_util
 from utils.logger import Logger
 from utils.timer import Timer
 
-def inject_default_parser(parser=None):
-    if parser is None:
-        parser = argparse.ArgumentParser()
-    parser.add_argument('--snapshot', default=None, help='load from snapshot')
-    parser.add_argument('--test_epoch', type=int, default=None, help='test epoch')
-    parser.add_argument('--test_iter', type=int, default=None, help='test iteration')
-    parser.add_argument('--reg_snapshot', default=None, help='load from snapshot')
-    return parser
-
 class BaseTester(abc.ABC):
     def __init__(self, cfg, parser=None, cudnn_deterministic=True):
         # parser
-        parser = inject_default_parser(parser)
         self.args = parser.parse_args()
 
         # logger

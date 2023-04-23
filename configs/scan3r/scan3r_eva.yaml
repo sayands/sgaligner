@@ -1,0 +1,18 @@
+seed: 42
+num_workers : 4
+
+model_name : 'eva'
+modules    : ['gcn', 'point', 'rel', 'attr']
+
+data :
+  name            : Scan3R
+  root_dir        : /local/home/sdebsarkar/Documents/datasets/3RScan
+  label_file_name : labels.instances.align.annotated.v2.ply
+  pred_subfix     : inseg.ply
+
+preprocess :
+  pc_resolutions      : [512]
+  subscenes_per_scene : 7
+  filter_segment_size : 512
+  min_obj_points      : 50
+  anchor_type_name    : '' 
