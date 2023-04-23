@@ -79,7 +79,7 @@ bash scripts/generate_data_scan3r_gt.sh
 To generate overlapping and non-overlapping pairs, use : 
 
 ```bash
-python data-preprocessing/gen_all_pairs_fileset.py
+python preprocessing/gen_all_pairs_fileset.py
 ```
 This will create a fileset with the same number of randomly chosen non-overlapping pairs from the generated subscans as overlapping pairs generated before during subscan generation.
 
@@ -99,7 +99,7 @@ We provide config files for the corresponding data in ``config/`` directory. Ple
 
 ```bash
 cd src
-python inference/sgaligner/inference_align_reg.py --snapshot <path to SGAligner trained model> --reg_snapshot <path to GeoTransformer model trained on 3DMatch>
+python inference/sgaligner/inference_align_reg.py --config ../configs/scan3r/scan3r_ground_truth.yaml --snapshot <path to SGAligner trained model> --reg_snapshot <path to GeoTransformer model trained on 3DMatch>
 ```
 
 #### Finding Overlapping vs Non-Overlapping Pairs
@@ -109,7 +109,7 @@ To run the inference, you need to:
 
 ```bash
 cd src
-python inference/sgaligner/inference_find_overlapper.py --snapshot <path to SGAligner trained model> --reg_snapshot <path to GeoTransformer model trained on 3DMatch>
+python inference/sgaligner/inference_find_overlapper.py --config ../configs/scan3r/scan3r_gt_w_wo_overlap.yaml --snapshot <path to SGAligner trained model> --reg_snapshot <path to GeoTransformer model trained on 3DMatch>
 ```
 
 #### 3D Point Cloud Mosaicking
@@ -123,7 +123,7 @@ And then, to run the inference, you need to:
 
 ```bash
 cd src
-python inference/sgaligner/inference_mosaicking.py --snapshot <path to SGAligner trained model> --reg_snapshot <path to GeoTransformer model trained on 3DMatch>
+python inference/sgaligner/inference_mosaicking.py --config ../configs/scan3r/scan3r_gt_mosaicking.yaml --snapshot <path to SGAligner trained model> --reg_snapshot <path to GeoTransformer model trained on 3DMatch>
 ```
 
 ## TODO :soon:
