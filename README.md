@@ -93,8 +93,6 @@ cd src
 python trainers/trainval_sgaligner.py --config ../configs/scan3r/scan3r_ground_truth.yaml
 ```
 
-[here](#benchmark-chart_with_upwards_trend)
-
 #### EVA Training
 We also provide training scripts for [EVA](https://arxiv.org/abs/2009.13603), used as a baseline after being adapted for scene graph alignment. To train EVA similar to SGAligner on the same data, you can use :
 
