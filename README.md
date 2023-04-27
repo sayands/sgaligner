@@ -53,7 +53,7 @@ Please follow the submodule for additional installation requirements and setup o
 ### Downloads :droplet:
 The pre-trained model and other meta files are available [here](https://drive.google.com/drive/folders/1elqdbYD5T2686r42lcUHE6SyiFnDsZur?usp=sharing).
 
-### Data + Benchmark :hammer:
+### Dataset Generation :hammer:
 After installing the dependencies, we preprocess the datasets and provide the benchmarks. 
 
 #### Subscan Pair Generation - 3RScan + 3DSSG
@@ -86,12 +86,14 @@ This will create a fileset with the same number of randomly chosen non-overlappi
 Usage on **Predicted Scene Graphs** : Coming Soon! 
 
 ### Training :bullettrain_side:
-To train SGAligner on 3RScan subscans generated from [here](#data--benchmark-hammer), you can use :
+To train SGAligner on 3RScan subscans generated from [here](#dataset-generation-hammer), you can use :
 
 ```bash
 cd src
 python trainers/trainval_sgaligner.py --config ../configs/scan3r/scan3r_ground_truth.yaml
 ```
+
+[here](#benchmark-chart_with_upwards_trend)
 
 #### EVA Training
 We also provide training scripts for [EVA](https://arxiv.org/abs/2009.13603), used as a baseline after being adapted for scene graph alignment. To train EVA similar to SGAligner on the same data, you can use :
@@ -135,6 +137,26 @@ And then, to run the inference, you need to:
 cd src
 python inference/sgaligner/inference_mosaicking.py --config ../configs/scan3r/scan3r_gt_mosaicking.yaml --snapshot <path to SGAligner trained model> --reg_snapshot <path to GeoTransformer model trained on 3DMatch>
 ```
+
+## Benchmark :chart_with_upwards_trend:
+We provide detailed results and comparisons here.
+
+### 3D Scene Graph Alignment (Node Matching)
+| Method | Mean Reciprocal Rank | Hits@1 | Hits@2 | Hits@3 | Hits@4 | Hits@5 |
+|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| [EVA](https://github.com/cambridgeltl/eva) | 0.867 | 0.790 | 0.884 | 0.938 | 0.963 | 0.977 | 
+| $\mathcal{P}$ | 0.884 | 0.835 | 0.886 | 0.921 | 0.938 | 0.951 |
+| $\mathcal{P}$ + $\mathcal{S}$ | 0.897 | 0.852 | 0.899 | 0.931 | 0.945 | 0.955 |
+| $\mathcal{P}$ + $\mathcal{S}$ + $\mathcal{R}$ | 0.911 | 0.861 | 0.916 | 0.947 | 0.961 | 0.970 |
+| SGAligner | 0.950 | 0.923 | 0.957 | 0.974 | 0.9823 | 0.987 |
+
+### 3D Point Cloud Registration
+| Method | CD | RRE | RTE | FMR | RR |
+|:-:|:-:|:-:|:-:|:-:|:-:|
+| [GeoTr](https://github.com/qinzheng93/GeoTransformer) | 0.02247	| 1.813 | 2.79 | 98.94 | 98.49 |
+| Ours, K=1 | 0.01677 | 1.425 | 2.88 | 99.85 | 98.79 |
+| Ours, K=2 | 0.01111 | 1.012 | 1.67 | 99.85 | 99.40 |
+| Ours, K=3 | 0.01525 | 1.736 | 2.55 | 99.85 | 98.81 | 
 
 ## TODO :soon:
 - [X] ~~Add 3D Point Cloud Mosaicking~~
