@@ -6,10 +6,8 @@
         content="SGAligner: Scene Alignment with 3D Scene Graphs">
   <meta name="keywords" content="SGAligner">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SGAligner</title>
+  <title>SGAligner 📐🌳🔍</title>
 
-  <!-- Global site tag (gtag.js) - Google Analytics -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-PYVRSFMDRL"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
 
@@ -41,7 +39,7 @@
   <script src="./static/js/index.js"></script>
 </head>
 <body>
-
+<!-- 
 <nav class="navbar" role="navigation" aria-label="main navigation">
   <div class="navbar-brand">
     <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false">
@@ -50,7 +48,7 @@
       <span aria-hidden="true"></span>
     </a>
   </div>
-</nav>
+</nav> -->
 
 
 <section class="hero">
@@ -58,7 +56,10 @@
     <div class="container is-max-desktop">
       <div class="columns is-centered">
         <div class="column has-text-centered">
-          <h1 class="title is-1 publication-title">SGAligner: Scene Alignment with 3D Scene Graphs</h1>
+          <h1 class="title is-1 publication-title">SGAligner 📐
+            <p class="title is-3 publication-title"> 3D Scene Alignment with Scene Graphs  </p>
+            
+          </h1>
           <div class="is-size-5 publication-authors">
             <span class="author-block">
               <a href="https://sayands.github.io/">Sayan Deb Sarkar</a><sup>1</sup>,</span>
@@ -124,10 +125,10 @@
 <section class="hero teaser">
   <div class="container is-max-desktop">
     <div class="hero-body">
-      <img src="static/images/teaser.png" style="max-width:100%" />
+      <img src="static/images/teaser.png" style="max-width:100%" /> <br> <br>
       <h2 class="subtitle has-text-centered">
-        <span class="dnerf">SGAligner</span> aligns 3D scene graphs of environments using multi-modal learning and leverage the output for the 
-        downstream task of 3D point cloud registration, 3D point cloud mosaicking and 3D alignment of a point cloud in a larger map that
+        SGAligner aligns 3D scene graphs of environments using multi-modal learning and leverages the output for the 
+        downstream task of 3D point cloud registration, 3D point cloud mosaicking, and 3D alignment of a point cloud in a larger map that
         contains changes
       </h2>
     </div>
@@ -142,19 +143,19 @@
         <h2 class="title is-3">Abstract</h2>
         <div class="content has-text-justified">
           <p>
-            Building 3D scene graphs has recently emerged as a topic in scene representation for several embodied AI 
-            applications to represent the world in a structured and rich manner. With their increased use in solving downstream tasks 
+            Building 3D scene graphs has recently emerged as a topic in scene representation for several embodied AI applications to represent 
+            the world in a structured and rich manner. With their increased use in solving downstream tasks 
             (eg, navigation and room rearrangement), can we leverage and recycle them for creating 3D maps of environments, 
-            a pivotal step in agent operation? We focus on the fundamental problem of aligning pairs of 3D scene graphs 
-            whose overlap can range from zero to partial and can contain arbitrary changes. 
-            </p>
-            <p>
-            We propose <span class="dnerf">SGAligner</span>, the <strong>first</strong> method for aligning pairs of 3D scene 
+            a pivotal step in agent operation? We focus on the fundamental problem of aligning pairs of 3D scene graphs whose 
+            overlap can range from zero to partial and can contain arbitrary changes.
+          </p>
+          <p>
+            We propose <strong>SGAligner</strong>, the <strong>first</strong> method for aligning pairs of 3D scene 
             graphs that is robust to in-the-wild scenarios (ie, unknown overlap -- if any -- and changes in the environment). 
             We get inspired by multi-modality knowledge graphs and use contrastive learning to learn a joint, multi-modal embedding space. 
-            We evaluate on the 3RScan dataset and further showcase that our method can be used for estimating the
-            transformation between pairs of 3D scenes. Since benchmarks for these tasks are missing, we create 
-            them on this dataset.
+            We evaluate on the 3RScan dataset and further showcase that our method can be used for estimating the transformation between pairs of 3D scenes. 
+            Since benchmarks for these tasks are missing, we create them on this dataset. 
+            The code, benchmark, and trained models are available on the project website.
           </p>
         </div>
       </div>
@@ -195,9 +196,20 @@
     </div>
   </div>
 
+  <!-- References -->
+  <section class="section" id="references">
+    <div class="container is-max-desktop content">
+      <h2 class="title">References 📚</h2>
+      [1] Wald et. al, <strong>RIO: 3D Object Instance Re-Localization in Changing Indoor Environments</strong>, <em>ICCV 
+        2019 </em> <br>
+      [2] Wald et. al, <strong>Learning 3D Semantic Scene Graphs from 3D Indoor Reconstructions</strong>,
+        <em>CVPR 2020</em>
+    </div>
+
+  </section>
   <section class="section" id="BibTeX">
     <div class="container is-max-desktop content">
-      <h2 class="title">BibTeX</h2>
+      <h2 class="title">BibTeX 🙏</h2>
       <pre><code>
         @misc{sgaligner,
           title={SGAligner : Scene Alignment with 3D Scene Graphs}, 
