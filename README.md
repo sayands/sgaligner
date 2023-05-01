@@ -23,7 +23,7 @@ SGAligner aligns 3D scene graphs of environments using multi-modal learning and 
 
 ## News :newspaper:
 
-* **1. May 2023**: [SGAligner preprint](https://arxiv.org/abs/2304.14880v1) released on arXiv
+* **1. May 2023**: [SGAligner preprint](https://arxiv.org/abs/2304.14880v1) released on arXiv.
 * **10. April 2023**: Code released.
 
 ## Code Structure :clapper:
