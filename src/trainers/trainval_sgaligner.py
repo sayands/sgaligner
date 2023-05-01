@@ -14,8 +14,9 @@ from aligner.losses import *
 from configs import config, update_config
 
 class Trainer(EpochBasedTrainer):
-    def __init__(self, cfg):
-        super().__init__(cfg, max_epoch=cfg.optim.max_epoch)
+    def __init__(self, cfg, parser=None):
+        super().__init__(cfg, parser)
+        
         # Model Specific params
         self.modules = cfg.modules
         self.rel_dim = cfg.model.rel_dim
@@ -94,24 +95,20 @@ class Trainer(EpochBasedTrainer):
 def parse_args(parser=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', dest='config', default='', type=str, help='configuration file name')
+    parser.add_argument('--resume', action='store_true', help='resume training')
+    parser.add_argument('--snapshot', default=None, help='load from snapshot')
+    parser.add_argument('--epoch', type=int, default=None, help='load epoch')
+    parser.add_argument('--log_steps', type=int, default=500, help='logging steps')
+    parser.add_argument('--local_rank', type=int, default=-1, help='local rank for ddp')
 
     args = parser.parse_args()
     return parser, args
 
 def main():
-    _, args = parse_args()
+    parser, args = parse_args()
     cfg = update_config(config, args.config)
-    trainer = Trainer(cfg)
+    trainer = Trainer(cfg, parser)
     trainer.run()
 
 if __name__ == '__main__':
     main()
-
-
-
-
-
-
-
-
-

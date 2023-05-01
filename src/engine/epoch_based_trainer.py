@@ -14,7 +14,7 @@ from utils.common import get_log_string
 from utils.summary_board import SummaryBoard
 
 class EpochBasedTrainer(BaseTrainer):
-    def __init__(self, cfg, max_epoch, parser=None, cudnn_deterministic=True, autograd_anomaly_detection=False,
+    def __init__(self, cfg, parser=None, cudnn_deterministic=True, autograd_anomaly_detection=False,
         save_all_snapshots=True, run_grad_check=False, grad_acc_steps=1):
         super().__init__(
             cfg,
@@ -25,7 +25,7 @@ class EpochBasedTrainer(BaseTrainer):
             run_grad_check=run_grad_check,
             grad_acc_steps=grad_acc_steps,
         )
-        self.max_epoch = max_epoch
+        self.max_epoch = cfg.optim.max_epoch
     
     def before_train_step(self, epoch, iteration, data_dict) -> None:
         pass
