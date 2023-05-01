@@ -10,6 +10,10 @@
 ![teaser](https://sayands.github.io/sgaligner/static/images/teaser.png)
 SGAligner aligns 3D scene graphs of environments using multi-modal learning and leverage the output for the downstream task of 3D point cloud registration.
 
+[[Project Webpage](https://sayandebsarkar.com/sgaligner/)]
+[[Paper](https://arxiv.org/abs/2304.14880)]
+
+
 ## News :newspaper:
 
 * **10. April 2023**: Code released.
@@ -167,11 +171,13 @@ We provide detailed results and comparisons here.
 
 ## BibTeX :pray:
 ```
-@article{,
-  title     = {{}},
-  author    = {},
-  booktitle = {{}},
-  year      = {}
+@misc{sarkar2023sgaligner,
+      title={SGAligner : 3D Scene Alignment with Scene Graphs}, 
+      author={Sayan Deb Sarkar and Ondrej Miksik and Marc Pollefeys and Daniel Barath and Iro Armeni},
+      year={2023},
+      eprint={2304.14880},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
 }
 ```
 ## Acknowledgments :recycle:
