@@ -5,14 +5,17 @@
 
 <sup>1</sup>ETH Zurich <sup>2</sup>Microsoft Mixed Reality & AI Labs
 
-</div>
+SGAligner aligns 3D scene graphs of environments using multi-modal learning and leverage the output for the downstream task of 3D point cloud registration.
 
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/sgaligner-3d-scene-alignment-with-scene/3d-scene-graph-alignment-on-3dssg)](https://paperswithcode.com/sota/3d-scene-graph-alignment-on-3dssg?p=sgaligner-3d-scene-alignment-with-scene)
-
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/sgaligner-3d-scene-alignment-with-scene/point-cloud-registration-on-3rscan)](https://paperswithcode.com/sota/point-cloud-registration-on-3rscan?p=sgaligner-3d-scene-alignment-with-scene)
 
+<a href="https://pytorch.org/get-started/locally/"><img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-ee4c2c?logo=pytorch&logoColor=white"></a>
+
 ![teaser](https://sayands.github.io/sgaligner/static/images/teaser.png)
-SGAligner aligns 3D scene graphs of environments using multi-modal learning and leverage the output for the downstream task of 3D point cloud registration.
+
+
+</div>
 
 [[Project Webpage](https://sayandebsarkar.com/sgaligner/)]
 [[Paper](https://arxiv.org/abs/2304.14880)]
