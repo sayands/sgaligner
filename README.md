@@ -7,6 +7,10 @@
 
 </div>
 
+[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/sgaligner-3d-scene-alignment-with-scene/3d-scene-graph-alignment-on-3dssg)](https://paperswithcode.com/sota/3d-scene-graph-alignment-on-3dssg?p=sgaligner-3d-scene-alignment-with-scene)
+
+[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/sgaligner-3d-scene-alignment-with-scene/point-cloud-registration-on-3rscan)](https://paperswithcode.com/sota/point-cloud-registration-on-3rscan?p=sgaligner-3d-scene-alignment-with-scene)
+
 ![teaser](https://sayands.github.io/sgaligner/static/images/teaser.png)
 SGAligner aligns 3D scene graphs of environments using multi-modal learning and leverage the output for the downstream task of 3D point cloud registration.
 
