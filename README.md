@@ -171,7 +171,6 @@ We provide detailed results and comparisons here.
 ## TODO :soon:
 - [X] ~~Add 3D Point Cloud Mosaicking~~
 - [X] ~~Add Support For [EVA](https://github.com/cambridgeltl/eva)~~
-- [ ] Add a demo for real-life point cloud testing
 - [ ] Add usage on Predicted Scene Graphs
 - [ ] Add scene graph alignment of local 3D scenes to prior 3D maps
 - [ ] Add overlapping scene finder with a traditional retrieval method (FPFH + VLAD + KNN)

@@ -53,7 +53,7 @@ _C.val.pc_res = 512
 
 # model param
 _C.model = CN()
-_C.model.rel_dim = 9
+_C.model.rel_dim = 41
 _C.model.attr_dim = 164
 _C.model.alignment_thresh = 0.4
 
