@@ -53,7 +53,7 @@ _C.val.pc_res = 512
 
 # model param
 _C.model = CN()
-_C.model.rel_dim = 41
+_C.model.rel_dim = 9
 _C.model.attr_dim = 164
 _C.model.alignment_thresh = 0.4
 
@@ -78,6 +78,12 @@ _C.reg_model.ransac_threshold = 0.03
 _C.reg_model.ransac_min_iters = 5000
 _C.reg_model.ransac_max_iters = 5000
 _C.reg_model.ransac_use_sprt = False
+
+# loss
+_C.loss = CN()
+_C.loss.alignment_loss_weight = 1.0
+_C.loss.constrastive_loss_weight = 1.0
+_C.loss.zoom = 0.1
 
 # inference
 _C.metrics = CN()
