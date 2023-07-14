@@ -23,6 +23,7 @@ SGAligner aligns 3D scene graphs of environments using multi-modal learning and 
 
 ## News :newspaper:
 
+* **14. July 2023** : SGAligner accepted to ICCV 2023. :fire:
 * **1. May 2023**: [SGAligner preprint](https://arxiv.org/abs/2304.14880v1) released on arXiv.
 * **10. April 2023**: Code released.
 
@@ -178,13 +179,11 @@ We provide detailed results and comparisons here.
 
 ## BibTeX :pray:
 ```
-@misc{sarkar2023sgaligner,
+@article{sarkar2023sgaligner,
       title={SGAligner : 3D Scene Alignment with Scene Graphs}, 
       author={Sayan Deb Sarkar and Ondrej Miksik and Marc Pollefeys and Daniel Barath and Iro Armeni},
-      year={2023},
-      eprint={2304.14880},
-      archivePrefix={arXiv},
-      primaryClass={cs.CV}
+      journal={Proceedings of the IEEE International Conference on Computer Vision (ICCV)},
+      year={2023}
 }
 ```
 ## Acknowledgments :recycle:
