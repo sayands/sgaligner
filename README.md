@@ -79,6 +79,9 @@ Download [3RScan](https://github.com/WaldJohannaU/3RScan) and [3DSSG](https://3d
 │   └── out         <- Default output directory for generated subscans (created when running pre-processing)
 ```
 
+> To generate ``labels.instances.align.annotated.v2.ply`` for each 3RScan scan, please refer to the repo from 
+[here](``https://github.com/ShunChengWu/3DSSG/blob/master/data_processing/transform_ply.py``).
+
 Change the absolute paths in ``utils/define.py``.
 
 First, we create sub-scans from each 3RScan scan using the ground truth scene Graphs from the 3DSSG dataset and then calculate the pairwise overlap ratio for the subscans in a scan. Finally, we preprocess the data for our framework. The relevant code can be found in the ``data-preprocessing/`` directory. You can use the following command to generate the subscans.
