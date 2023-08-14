@@ -23,6 +23,38 @@ def compute_hits_k(rank_list, e1i_idxs, e2i_idxs, k=1):
 
     return correct, total
 
+def compute_sgar(sim, rank_list, e1i_idxs, e2i_idxs, modes):
+    pair_data = { 'pred_matches' : [] , 'gt_matches' : [], 'sim' : []}
+    rank_list = rank_list.detach().cpu().numpy()
+    sim = sim.detach().cpu().numpy()
+    
+    for idx, e1i_idx in enumerate(e1i_idxs):
+        e1i_idx_rank_list = list(rank_list[e1i_idx])
+        e1i_idx_rank_list.remove(e1i_idx)
+
+        pair_data['pred_matches'].append(e1i_idx_rank_list[0])
+        pair_data['sim'].append(sim[e1i_idx][e1i_idx_rank_list[0]])
+        pair_data['gt_matches'].append(e2i_idxs[idx])
+    
+    sim_argsorted = np.argsort(pair_data['sim'])
+    sgar_vals = {}
+
+    for mode in modes:
+        if mode == '2'    : sim_argsorted_mode = sim_argsorted[: 2]
+        elif mode == '50' : sim_argsorted_mode = sim_argsorted[: len(sim_argsorted) // 2]
+        else : sim_argsorted_mode = sim_argsorted
+
+        mis_res = False
+        for idx in sim_argsorted_mode:
+            if pair_data['pred_matches'][idx] != pair_data['gt_matches'][idx]:
+                mis_res = True
+                break
+    
+        if mis_res: sgar_vals[mode] = 0.0
+        else      : sgar_vals[mode] = 1.0
+    
+    return sgar_vals
+
 def compute_node_corrs(rank_list, src_objects_count, k=1):
     rank_list = rank_list.detach().cpu().numpy()
     node_corrs = []

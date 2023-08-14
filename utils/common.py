@@ -2,6 +2,7 @@ import json
 import os
 import os.path as osp
 import pickle
+import numpy as np
 
 def ensure_dir(path):
     if not osp.exists(path):
@@ -54,6 +55,40 @@ def get_format_strings(kv_pairs):
         log_strings.append(format_string.format(key, value))
     return log_strings
 
+def log_softmax_to_probabilities(log_softmax, epsilon=1e-5):
+    softmax = np.exp(log_softmax)
+    probabilities = softmax / np.sum(softmax)
+    assert np.sum(probabilities) >= 1.0 - epsilon and np.sum(probabilities) <= 1.0 + epsilon 
+    return probabilities
+
+def merge_duplets(duplets):
+    merged = []
+    for duplet in duplets:
+        merged_duplet = None
+        for i, m in enumerate(merged):
+            if any(id in m for id in duplet):
+                if merged_duplet is None:
+                    merged_duplet = m
+                else:
+                    merged_duplet.extend(m)
+                    merged.pop(i)
+        if merged_duplet is not None:
+            merged_duplet.extend(duplet)
+        else:
+            merged.append(list(duplet))
+    
+    merged_set = list()
+    for merge in merged:
+        merged_set.append(sorted(list(set(merge))))
+    return merged_set
+
+
+
+
+
+
+
+
 def update_dict(dictionary, to_add_dict):
     for key in dictionary.keys():
         dictionary[key].append(to_add_dict[key])
@@ -88,3 +123,19 @@ def get_log_string(result_dict, name=None, epoch=None, max_epoch=None, iteration
     
     message = ', '.join(log_strings)
     return message
+
+def name2idx(file_name):
+    name2idx = {}
+    index = 0
+    with open(file_name) as f:
+        lines = f.readlines()
+        for line in lines:
+            className = line.split('\n')[0]
+            name2idx[className] = index
+            index += 1
+    
+    return name2idx
+
+def get_key_by_value(dictionary, value):
+    for key, values in dictionary.items():
+        if value in values: return key

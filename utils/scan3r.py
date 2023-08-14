@@ -2,7 +2,12 @@ import os.path as osp
 import numpy as np
 import json
 from glob import glob
-from plyfile import PlyData
+from plyfile import PlyData, PlyElement
+
+def get_scan_ids(dirname, split):
+    filepath = osp.join(dirname, '{}_scans.txt'.format(split))
+    scan_ids = np.genfromtxt(filepath, dtype = str)
+    return scan_ids
 
 def read_labels(plydata):
     data = plydata.metadata['_ply_raw']['vertex']['data']

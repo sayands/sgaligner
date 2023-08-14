@@ -4,6 +4,7 @@ import torch.nn.functional as F
 
 from aligner.networks.gat import MultiGAT
 from aligner.networks.pointnet import PointNetfeat
+from aligner.networks.pct import NaivePCT
 
 class ProjectionHead(nn.Module):
     def __init__(self, in_dim, hidden_dim, out_dim, dropout):
@@ -53,7 +54,13 @@ class MultiModalEncoder(nn.Module):
         self.meta_embedding_rel = nn.Linear(self.rel_dim, self.emb_dim)
         self.meta_embedding_attr = nn.Linear(self.attr_dim, self.emb_dim)
         
-        self.object_encoder = PointNetfeat(global_feat=True, batch_norm=True, point_size=3, input_transform=False, feature_transform=False, out_size=self.pt_out_dim)
+        if 'point' in self.modules:
+            self.object_encoder = PointNetfeat(global_feat=True, batch_norm=True, point_size=3, input_transform=False, feature_transform=False, out_size=self.pt_out_dim)
+        elif 'pct' in self.modules:
+            self.object_encoder = NaivePCT()
+        else:
+            raise NotImplementedError
+        
         self.object_embedding = nn.Linear(self.pt_out_dim, self.emb_dim)
         
         self.structure_encoder = MultiGAT(n_units=self.hidden_units, n_heads=self.heads, dropout=self.dropout)

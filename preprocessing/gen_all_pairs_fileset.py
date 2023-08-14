@@ -41,8 +41,6 @@ def gen_fileset(subscans_files_dir, split, mode='orig'):
     anchor_data = list(anchor_data)
     random.shuffle(anchor_data)
 
-    print(anchor_data[:10])
-
     print('[INFO] Generated {} {} subscan pairs overlap + without overlap ...'.format(len(anchor_data), split))
     common.write_json(anchor_data, osp.join(subscans_files_dir, mode, 'anchors_subscan_anchors_w_wo_overlap_{}.json'.format(split)))
 
@@ -56,5 +54,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-

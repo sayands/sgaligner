@@ -37,6 +37,10 @@ class AlignerRegTester(SingleTester):
         
         self.normal_registration_metrics_meter = {'CD' : [], 'IR' : [], 'RRE' : [], 'RTE' : [], 'recall' : [], 'FMR' : []}
         self.aligner_registration_metrics_meter = {'CD' : [], 'IR' : [], 'RRE' : [], 'RTE' : [], 'recall' : [], 'FMR' : []}
+        self.recall_modes = ['2', '50', '100']
+        self.anchors = []
+        for recall_mode in self.recall_modes:
+            self.alignment_metrics_meter['sgar'][recall_mode] = []
 
         # dataloader
         start_time = time.time()
@@ -82,9 +86,12 @@ class AlignerRegTester(SingleTester):
         for key in result_dict:
             if type(key) == int:
                 metrics_dict['hits@_{}'.format(key)] = round(result_dict[key]['correct'] / result_dict[key]['total'], 5)
-            else:
+            elif type(result_dict[key]) == list:
                 metrics_dict[key] = round(np.array(result_dict[key]).mean(), 5)
-        
+            elif type(result_dict[key]) == dict: # sgar
+                for mode in result_dict[key]:
+                    metrics_dict[key + '_' + mode] = round(np.array(result_dict[key][mode]).mean(), 5)
+
         return metrics_dict
         
     def eval_step(self, iteration, data_dict, output_dict):
@@ -116,8 +123,8 @@ class AlignerRegTester(SingleTester):
                 
                 emb = embedding[obj_cnt_start_idx : obj_cnt_end_idx]
                 emb = emb / emb.norm(dim=1)[:, None]
-                dist = 1 - torch.mm(emb, emb.transpose(0,1))
-                rank_list = torch.argsort(dist, dim = 1)
+                sim = 1 - torch.mm(emb, emb.transpose(0,1))
+                rank_list = torch.argsort(sim, dim = 1)
                 assert np.max(e1i_idxs) <= rank_list.shape[0]
 
                 # Compute Mean Reciprocal Rank
@@ -128,6 +135,13 @@ class AlignerRegTester(SingleTester):
                     correct, total = alignment.compute_hits_k(rank_list, e1i_idxs, e2i_idxs, k)
                     self.alignment_metrics_meter[k]['correct'] += correct
                     self.alignment_metrics_meter[k]['total'] += total
+                
+                # Compute SGAR
+                sgar_vals = alignment.compute_sgar(sim, rank_list, e1i_idxs, e2i_idxs, self.recall_modes)
+                for recall_mode in self.recall_modes:
+                    self.alignment_metrics_meter['sgar'][recall_mode].append(sgar_vals[recall_mode])
+
+                self.anchors.append(len(e1i_idxs))
                 
                 if self.run_reg:
                     node_corrs = alignment.compute_node_corrs(rank_list, src_objects_count, self.reg_k)

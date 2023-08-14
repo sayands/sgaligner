@@ -13,22 +13,33 @@ from utils import common, scan3r
 class Scan3RDataset(data.Dataset):
     def __init__(self, cfg, split):
         self.split = split
+        self.use_predicted = cfg.use_predicted
         self.pc_resolution = cfg.val.pc_res if split == 'val' else cfg.train.pc_res
         self.anchor_type_name = cfg.preprocess.anchor_type_name
         self.model_name = cfg.model_name
+        self.scan_type = cfg.scan_type
+        
+        scan_dirname = '' if self.scan_type == 'scan' else 'out'
+        scan_dirname = osp.join(scan_dirname, 'predicted') if self.use_predicted else scan_dirname
 
-        self.scans_dir = osp.join(cfg.data.root_dir)
+        self.scans_dir = osp.join(cfg.data.root_dir, scan_dirname)
         self.scans_scenes_dir = osp.join(self.scans_dir, 'scenes')
         self.scans_files_dir = osp.join(self.scans_dir, 'files')
         
-        self.subscans_dir = osp.join(cfg.data.root_dir, 'out')
-        self.subscans_scenes_dir = osp.join(self.subscans_dir, 'scenes')
-        self.subscans_files_dir = osp.join(self.subscans_dir, 'files')
         self.mode = 'orig' if self.split == 'train' else cfg.val.data_mode
 
-        self.anchor_data_filename = osp.join(self.subscans_files_dir, '{}/anchors{}_{}.json'.format(self.mode, self.anchor_type_name, split))
+        self.anchor_data_filename = osp.join(self.scans_files_dir, '{}/anchors{}_{}.json'.format(self.mode, self.anchor_type_name, split))
         print('[INFO] Reading from {} with point cloud resolution - {}'.format(self.anchor_data_filename, self.pc_resolution))
-        self.anchor_data = common.load_json(self.anchor_data_filename)
+        self.anchor_data = common.load_json(self.anchor_data_filename)[:]
+        
+        if split == 'val' and cfg.val.overlap_low != cfg.val.overlap_high:
+            final_anchor_data = []
+            for anchor_data_idx in self.anchor_data:
+                if anchor_data_idx['overlap'] >= cfg.val.overlap_low and anchor_data_idx['overlap'] < cfg.val.overlap_high:
+                    final_anchor_data.append(anchor_data_idx)
+            
+            self.anchor_data = final_anchor_data
+        
         self.is_training = self.split == 'train'
         self.do_augmentation = False if self.split == 'val' else cfg.train.use_augmentation
 
@@ -50,11 +61,11 @@ class Scan3RDataset(data.Dataset):
         graph_data = self.anchor_data[idx]
         src_scan_id = graph_data['src']
         ref_scan_id = graph_data['ref']
-        overlap = graph_data['overlap']
+        overlap = graph_data['overlap'] if 'overlap' in graph_data else -1.0
         
         # Centering
-        src_points = scan3r.load_plydata_npy(osp.join(self.subscans_scenes_dir, '{}/data.npy'.format(src_scan_id)), obj_ids = None)
-        ref_points = scan3r.load_plydata_npy(osp.join(self.subscans_scenes_dir, '{}/data.npy'.format(ref_scan_id)), obj_ids = None)
+        src_points = scan3r.load_plydata_npy(osp.join(self.scans_scenes_dir, '{}/data.npy'.format(src_scan_id)), obj_ids = None)
+        ref_points = scan3r.load_plydata_npy(osp.join(self.scans_scenes_dir, '{}/data.npy'.format(ref_scan_id)), obj_ids = None)
 
         if self.split == 'train':
             if np.random.rand(1)[0] > 0.5:
@@ -64,12 +75,12 @@ class Scan3RDataset(data.Dataset):
         else:
             pcl_center = np.mean(src_points, axis=0)
 
-        src_data_dict = common.load_pkl_data(osp.join(self.subscans_files_dir, '{}/data/{}.pkl'.format(self.mode, src_scan_id)))
-        ref_data_dict = common.load_pkl_data(osp.join(self.subscans_files_dir, '{}/data/{}.pkl'.format(self.mode, ref_scan_id)))
+        src_data_dict = common.load_pkl_data(osp.join(self.scans_files_dir, '{}/data/{}.pkl'.format(self.mode, src_scan_id)))
+        ref_data_dict = common.load_pkl_data(osp.join(self.scans_files_dir, '{}/data/{}.pkl'.format(self.mode, ref_scan_id)))
         
         src_object_ids = src_data_dict['objects_id']
         ref_object_ids = ref_data_dict['objects_id']
-        anchor_obj_ids = graph_data['anchorIds']
+        anchor_obj_ids = graph_data['anchorIds'] if 'anchorIds' in graph_data else src_object_ids
         global_object_ids = np.concatenate((src_data_dict['objects_cat'], ref_data_dict['objects_cat']))
         
         anchor_obj_ids = [anchor_obj_id for anchor_obj_id in anchor_obj_ids if anchor_obj_id != 0]
@@ -96,8 +107,13 @@ class Scan3RDataset(data.Dataset):
         e2j_idxs = np.array([ref_object_id2idx[object_id] for object_id in ref_data_dict['objects_id'] if object_id not in anchor_obj_ids]) + src_object_points.shape[0] # e2j
 
         tot_object_points = torch.cat([torch.from_numpy(src_object_points), torch.from_numpy(ref_object_points)]).type(torch.FloatTensor)
-        tot_bow_vec_obj_attr_feats = torch.cat([torch.from_numpy(src_data_dict['bow_vec_object_attr_feats']), torch.from_numpy(ref_data_dict['bow_vec_object_attr_feats'])])
         tot_bow_vec_obj_edge_feats = torch.cat([torch.from_numpy(src_data_dict['bow_vec_object_edge_feats']), torch.from_numpy(ref_data_dict['bow_vec_object_edge_feats'])])
+        if not self.use_predicted:
+            tot_bow_vec_obj_attr_feats = torch.cat([torch.from_numpy(src_data_dict['bow_vec_object_attr_feats']), torch.from_numpy(ref_data_dict['bow_vec_object_attr_feats'])])
+        
+        else:
+            tot_bow_vec_obj_attr_feats = torch.zeros(tot_object_points.shape[0], 41)
+        
         tot_rel_pose = torch.cat([torch.from_numpy(src_data_dict['rel_trans']), torch.from_numpy(ref_data_dict['rel_trans'])])
 
         data_dict = {} 

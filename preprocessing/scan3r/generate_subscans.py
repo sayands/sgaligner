@@ -37,15 +37,11 @@ if __name__ == '__main__':
     
     else: 
         '''Running subscan generation on data split'''
-        if 'predicted' in args.config:
-            sub_gen_scan3r = SubGenScan3R(cfg, split=args.split, predicted_sg=True)
-        else:
-            sub_gen_scan3r = SubGenScan3R(cfg, split=args.split)
+        sub_gen_scan3r = SubGenScan3R(cfg, split=args.split)
         sub_gen_scan3r.logger.info('[INFO] Running Subscan Generation for {} scans...'.format(args.split))
+
         for idx in tqdm(range(len(sub_gen_scan3r))):
             sub_gen_scan3r[idx, False]
         
         sub_gen_scan3r.calculate_overlap()
         sub_gen_scan3r.write_metadata()
-    
-

@@ -5,6 +5,31 @@ import torch
 from scipy.spatial.transform import Rotation
 from typing import Optional
 from scipy.spatial import cKDTree
+import trimesh
+
+def load_inseg(pth_ply):
+    cloud_pd = trimesh.load(pth_ply, process=False)
+    points_pd = cloud_pd.vertices
+    segments_pd = cloud_pd.metadata['_ply_raw']['vertex']['data']['label'].flatten()
+
+    return cloud_pd, points_pd, segments_pd
+
+def load_obj(filename):
+    with open(filename, 'r') as f:
+        vertices = []
+        faces = []
+        for line in f:
+            if line.startswith('v '):
+                vertex = list(map(float, line.strip().split()[1:]))
+                vertices.append(vertex)
+            elif line.startswith('f '):
+                face = [int(vertex.split('/')[0]) - 1 for vertex in line.strip().split()[1:]]
+                faces.append(face)
+        
+    v = np.asarray(vertices)
+    f = np.asarray(faces)
+    assert v.shape[1] == f.shape[1]
+    return v, f
 
 def normalize_pc(pc, return_distances=False):
     pc_ = pc[:,:3]
@@ -131,29 +156,54 @@ def apply_transform(points: np.ndarray, transform: np.ndarray, normals: Optional
     else:
         return points
 
-# def createAndWriteSceneGraph(sceneData, outDir):
-#     subScanRelationshipData = sceneData['relationships']
-#     subScanSemSegData = sceneData['semseg']
-#     subScanObjJSON = sceneData['objects_json']
+def sample_faces(vertices, faces, n_samples=10**4):
+  """
+  Samples point cloud on the surface of the model defined as vectices and
+  faces. This function uses vectorized operations so fast at the cost of some
+  memory.
 
-#     # Visualisation
-#     dot = graphviz.Digraph(comment='Subscene Graph')  
-#     # Nodes
-#     dot.attr('node', shape='oval', fontname='Sans', fontsize='16.0')
-#     for segGroup in subScanSemSegData['segGroups']:
-#         color = [objects['ply_color'] for objects in subScanObjJSON['objects'] if int(objects['id']) == segGroup['objectId']][0]
-#         dot.attr('node', color=color, style='filled')
-#         objectId = segGroup['objectId']
-#         label = segGroup['label']
-#         dot.node(str(objectId), label)
-    
-#     # Edges
-#     dot.attr('edge', fontname='Sans', fontsize='12.0', color='black', style='filled')
-#     for relationships in subScanRelationshipData['relationships']:
-#         subId = str(relationships[0])
-#         obId = str(relationships[1])
-#         relationshipName = relationships[3]
+  Parameters:
+    vertices  - n x 3 matrix
+    faces     - n x 3 matrix
+    n_samples - positive integer
 
-#         dot.attr('edge', color='green')
-#         dot.edge(subId, obId, relationshipName)
-#     dot.render(filename=osp.join(outDir, 'scene_graph.gv'))
+  Return:
+    vertices - point cloud
+
+  Reference :
+    [1] Barycentric coordinate system
+
+    \begin{align}
+      P = (1 - \sqrt{r_1})A + \sqrt{r_1} (1 - r_2) B + \sqrt{r_1} r_2 C
+    \end{align}
+  """
+  vec_cross = np.cross(vertices[faces[:, 0], :] - vertices[faces[:, 2], :],
+                       vertices[faces[:, 1], :] - vertices[faces[:, 2], :])
+  face_areas = np.sqrt(np.sum(vec_cross ** 2, 1))
+  face_areas = face_areas / np.sum(face_areas)
+
+  # Sample exactly n_samples. First, oversample points and remove redundant
+  # Error fix by Yangyan (yangyan.lee@gmail.com) 2017-Aug-7
+  n_samples_per_face = np.ceil(n_samples * face_areas).astype(int)
+  floor_num = np.sum(n_samples_per_face) - n_samples
+  if floor_num > 0:
+    indices = np.where(n_samples_per_face > 0)[0]
+    floor_indices = np.random.choice(indices, floor_num, replace=True)
+    n_samples_per_face[floor_indices] -= 1
+
+  n_samples = np.sum(n_samples_per_face)
+
+  # Create a vector that contains the face indices
+  sample_face_idx = np.zeros((n_samples, ), dtype=int)
+  acc = 0
+  for face_idx, _n_sample in enumerate(n_samples_per_face):
+    sample_face_idx[acc: acc + _n_sample] = face_idx
+    acc += _n_sample
+
+  r = np.random.rand(n_samples, 2);
+  A = vertices[faces[sample_face_idx, 0], :]
+  B = vertices[faces[sample_face_idx, 1], :]
+  C = vertices[faces[sample_face_idx, 2], :]
+  P = (1 - np.sqrt(r[:,0:1])) * A + np.sqrt(r[:,0:1]) * (1 - r[:,1:]) * B + \
+      np.sqrt(r[:,0:1]) * r[:,1:] * C
+  return P

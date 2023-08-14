@@ -14,12 +14,15 @@ from utils.logger import Logger
 
 class SubGenScan3R(Dataset):
     ''' Subset Generation from 3RScan dataset '''
-    def __init__(self, cfg, split='train', predicted_sg=False):
-        self.predicted = predicted_sg
+    def __init__(self, cfg, split='train'):
+        self.predicted = cfg.use_predicted
         self.scene_dir = osp.join(cfg.data.root_dir, 'scenes')
-        self.file_dir = osp.join(cfg.data.root_dir, 'files')
         
-        self.out_dir = osp.join(cfg.data.root_dir, 'out')
+        file_dirname = 'files/predicted' if self.predicted else 'files'
+        self.file_dir = osp.join(cfg.data.root_dir, file_dirname) 
+        
+        out_dirname = 'out/predicted' if self.predicted else 'out' 
+        self.out_dir = osp.join(cfg.data.root_dir, out_dirname)
         self.scene_out_dir = osp.join(self.out_dir, 'scenes')
         self.file_out_dir = osp.join(self.out_dir, 'files')
         self.split = split
@@ -30,7 +33,7 @@ class SubGenScan3R(Dataset):
 
         self.logger = Logger(log_file=osp.join(self.file_out_dir, 'log.txt'))
         
-        self.scan_ids = np.genfromtxt(osp.join(self.file_dir, '{}_scans.txt'.format(self.split)), dtype = str)
+        self.scan_ids = scan3r.get_scan_ids(self.file_dir, self.split)
 
         # Load all relationships
         self.scan_rels = common.load_json(osp.join(self.file_dir, 'relationships.json'))['scans']
@@ -38,7 +41,6 @@ class SubGenScan3R(Dataset):
         # Load objects json
         self.scan_objs = common.load_json(osp.join(self.file_dir, 'objects.json'))['scans']
 
-        self.label_file_name = cfg.data.label_file_name
         self.num_subscans_per_scan = cfg.preprocess.subscenes_per_scene
         self.subscene_rels = {'scans' : []}
         self.subscene_objs = {'scans' : []}
@@ -46,6 +48,9 @@ class SubGenScan3R(Dataset):
         self.obj_pt_scene_thresh = cfg.preprocess.min_obj_points
         self.logger.info('[INFO] Loaded {} {} scan data...'.format(self.__len__(), self.split))
         
+        self.label_file_name = 'labels.instances.align.annotated.v2.ply' if not self.predicted else 'inseg_filtered.ply'
+        self.save_name = 'data.npy'
+        self.skip = None if not self.predicted else 5
 
     def gen_scene_graph(self, scan_id, idx, ply_data, visible_pts_mask):
         obj_json_scan = [scan_obj for scan_obj in self.scan_objs if scan_obj['scan'] == scan_id][0]['objects']
@@ -71,14 +76,13 @@ class SubGenScan3R(Dataset):
         # Loop through scan relationships
         subscan_rels = []
         for (sub_id, ob_id, rel_id, rel_name) in scan_rels:
-            num_sub_pts = len(np.where(visible_pts_obj_ids == sub_id)[0])
-            num_ob_pts = len(np.where(visible_pts_obj_ids == ob_id)[0])
+            num_sub_pts = len(np.where(visible_pts_obj_ids == int(sub_id))[0])
+            num_ob_pts = len(np.where(visible_pts_obj_ids == int(ob_id))[0])
 
             if num_sub_pts > self.obj_pt_scene_thresh and num_ob_pts > self.obj_pt_scene_thresh:
                 subscan_rels.append([sub_id, ob_id, rel_id, rel_name])
         
         subscan_rel_data = {'relationships' : subscan_rels, "scan" : subscan_id}
-
         # Append to create sub scene relationships.json
         self.subscene_rels['scans'].append(subscan_rel_data)
         subscan_data = {'pcl' : visible_pcl_data, 'subscan_id' : subscan_id, 'relationships' : subscan_rel_data, 'objects' : subscan_obj_data}
@@ -165,7 +169,7 @@ class SubGenScan3R(Dataset):
             vis = open3d.make_open3d_visualiser()
         
         scan_id = self.scan_ids[idx]
-        frame_idxs = scan3r.load_frame_idxs(self.scene_dir, scan_id)
+        frame_idxs = scan3r.load_frame_idxs(self.scene_dir, scan_id, skip=self.skip)
 
         # Load all frame poses
         frame_poses = scan3r.load_all_poses(self.scene_dir, scan_id, frame_idxs)
@@ -173,7 +177,8 @@ class SubGenScan3R(Dataset):
         # Load scene pcl
         ply_data = scan3r.load_ply_data(self.scene_dir, scan_id, self.label_file_name)
         scene_pts = np.stack((ply_data['vertex']['x'], ply_data['vertex']['y'], ply_data['vertex']['z'])).transpose()
-
+        if scene_pts.shape[0] == 0: return
+        
         scene_pcd = open3d.make_open3d_point_cloud(visualisation.remove_ceiling(scene_pts))
 
         if visualise: 
@@ -225,12 +230,13 @@ class SubGenScan3R(Dataset):
                     subscan_data = self.gen_scene_graph(scan_id, subscan_idx, ply_data, curr_visible_mask)
                     subscan_out_dir = osp.join(self.scene_out_dir, subscan_data['subscan_id'])
                     common.ensure_dir(subscan_out_dir)
-                    np.save(osp.join(subscan_out_dir, 'data.npy'), subscan_data['pcl'])
+                    np.save(osp.join(subscan_out_dir, self.save_name), subscan_data['pcl'])
 
                 subscan_idx += 1
                 curr_visible_mask = np.zeros(scene_pts.shape[0]).astype('bool')
             
             frame_cnt += 1
+
         if visualise:
             self.logger.info('[INFO] Generated {} subscans...'.format(subscan_idx))
             vis.run()

@@ -10,11 +10,14 @@ _C.seed = 42
 _C.num_workers = 4
 _C.model_name = ''
 _C.modules = []
-_C.registration = True
+_C.registration = False
+_C.modality = ''
+_C.use_predicted = False
+_C.scan_type = 'subscan'
 
 # path params
 _C.data = CN()
-_C.data.name = ''
+_C.data.name = 'Scan3R'
 _C.data.root_dir = ''
 _C.data.label_file_name = ''
 _C.data.ply_subfix = ''
@@ -50,6 +53,8 @@ _C.val = CN()
 _C.val.data_mode = 'orig'
 _C.val.batch_size = 4
 _C.val.pc_res = 512
+_C.val.overlap_low = 0.0
+_C.val.overlap_high = 0.0
 
 # model param
 _C.model = CN()
@@ -66,7 +71,13 @@ _C.optim.weight_decay = 1e-6
 _C.optim.max_epoch = 50
 _C.optim.grad_acc_steps = 1
 
-# # registration model params
+# loss
+_C.loss = CN()
+_C.loss.alignment_loss_weight = 1.0
+_C.loss.constrastive_loss_weight = 1.0
+_C.loss.zoom = 0.1
+
+# registration model params
 _C.reg_model = CN()
 _C.reg_model.K = 1
 _C.reg_model.neighbor_limits = [38, 36, 36, 38]
@@ -78,12 +89,6 @@ _C.reg_model.ransac_threshold = 0.03
 _C.reg_model.ransac_min_iters = 5000
 _C.reg_model.ransac_max_iters = 5000
 _C.reg_model.ransac_use_sprt = False
-
-# loss
-_C.loss = CN()
-_C.loss.alignment_loss_weight = 1.0
-_C.loss.constrastive_loss_weight = 1.0
-_C.loss.zoom = 0.1
 
 # inference
 _C.metrics = CN()
@@ -98,7 +103,7 @@ def update_config(cfg, filename, ensure_dir=True):
         cfg.working_dir = osp.dirname(osp.abspath(__file__))
         cfg.root_dir = osp.dirname(_C.working_dir)
         cfg.exp_name = '_'.join(_C.modules)
-        cfg.output_dir = osp.join(_C.root_dir, 'output', _C.model_name, _C.exp_name)
+        cfg.output_dir = osp.join(_C.root_dir, 'output', _C.data.name, _C.model_name, _C.exp_name)
         cfg.snapshot_dir = osp.join(_C.output_dir, 'snapshots')
         cfg.log_dir = osp.join(_C.output_dir, 'logs')
         cfg.event_dir = osp.join(_C.output_dir, 'events')

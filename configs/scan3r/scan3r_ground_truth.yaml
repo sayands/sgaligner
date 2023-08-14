@@ -1,9 +1,11 @@
 seed: 42
 num_workers : 4
 
-model_name   : 'sgaligner'
-modules      : ['gat', 'point', 'rel']
-registration : True
+model_name    : 'sgaligner'
+modules       : ['point', 'gat', 'rel', 'attr']
+use_predicted : False
+registration  : False
+scan_type     : 'subscan'
 
 data :
   name            : Scan3R
@@ -12,7 +14,24 @@ data :
   pred_subfix     : inseg.ply
 
 preprocess :
-  pc_resolutions      : [512]
+  pc_resolutions      : [64, 128, 256, 512]
   subscenes_per_scene : 7
   filter_segment_size : 512
-  min_obj_points      : 50 
+  min_obj_points      : 50
+  anchor_type_name    : '' 
+
+model :
+  rel_dim             : 9
+  attr_dim            : 164
+  alignment_thresh    : 0.4
+
+train :
+  batch_size          : 2
+
+val :
+  batch_size          : 4
+  overlap_low         : 0.0
+  overlap_high        : 0.0
+
+val :
+  pc_res : 512
