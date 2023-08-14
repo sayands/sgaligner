@@ -1,5 +1,6 @@
-## SGAligner : 3D Scene Alignment with Scene Graphs
 <div align='center'>
+<h2 align="center"> SGAligner : 3D Scene Alignment with Scene Graphs </h2>
+<h3 align="center">ICCV 2023</h3>
 
 <a href="https://sayands.github.io/">Sayan Deb Sarkar</a><sup>1</sup>, <a href="https://miksik.co.uk/">Ondrej Miksik</a><sup>2</sup>, <a href="https://people.inf.ethz.ch/marc.pollefeys/">Marc Pollefeys</a><sup>1,2</sup>, <a href="https://www.linkedin.com/in/d%C3%A1niel-bar%C3%A1th-3a489092/">Daniel Barath</a><sup>1</sup>, <a href="https://ir0.github.io/">Iro Armeni</a><sup>1</sup>
 
