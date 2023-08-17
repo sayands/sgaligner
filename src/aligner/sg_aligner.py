@@ -111,7 +111,7 @@ class MultiModalEncoder(nn.Module):
 
                 emb = self.structure_embedding(structure_embed)
             
-            elif module == 'point':
+            elif module in ['point', 'pct']:
                 emb = self.object_encoder(tot_object_points)
                 emb = self.object_embedding(emb)
 

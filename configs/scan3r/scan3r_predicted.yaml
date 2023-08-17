@@ -26,3 +26,6 @@ model :
 
 val : 
   batch_size          : 4
+
+reg_model :
+  K : 2

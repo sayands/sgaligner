@@ -88,7 +88,7 @@ _C.reg_model.inlier_ratio_thresh = 0.05
 _C.reg_model.ransac_threshold = 0.03
 _C.reg_model.ransac_min_iters = 5000
 _C.reg_model.ransac_max_iters = 5000
-_C.reg_model.ransac_use_sprt = False
+_C.reg_model.ransac_use_sprt = True
 
 # inference
 _C.metrics = CN()

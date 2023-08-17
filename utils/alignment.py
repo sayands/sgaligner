@@ -1,3 +1,4 @@
+import numpy as np 
 
 def compute_mean_reciprocal_rank(rank_list, e1i_idxs, e2i_idxs, mrr_arr):
     rank_list = rank_list.detach().cpu().numpy()

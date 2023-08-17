@@ -56,6 +56,15 @@ class RegistrationEvaluator(abc.ABC):
         return chamfer_distance, inlier_ratio, rre, rte, accepted, fmr
 
     def perform_registration(self, src_points, ref_points, gt_transform):
+        npoint = 10000
+        if src_points.shape[0] > npoint: 
+            indices = np.random.choice(src_points.shape[0], npoint, replace=False)
+            src_points = src_points[indices]
+        
+        if ref_points.shape[0] > npoint: 
+            indices = np.random.choice(ref_points.shape[0], npoint, replace=False)
+            ref_points = ref_points[indices]
+            
         src_feats = np.ones_like(src_points[:, :1])
         ref_feats = np.ones_like(ref_points[:, :1])
 
@@ -104,7 +113,7 @@ class RegistrationEvaluator(abc.ABC):
                                                                                                est_transform, gt_transform, 
                                                                                                src_corr_points, ref_corr_points, 
                                                                                                gt_src_corr_points, gt_ref_corr_points)
-            if recall == 0.0: return None
+            # if recall == 0.0: return None
             return {
                 'CD' : chamfer_distance,
                 'IR' : inlier_ratio,
@@ -144,13 +153,13 @@ class RegistrationEvaluator(abc.ABC):
             ref_corr_points = output_dict['ref_corr_points']
             src_corr_points = output_dict['src_corr_points']
             corr_scores = output_dict['corr_scores']
-
+            
             if corr_scores.shape[0] > self.num_p2p_corrs // len(node_corrs):
                 sel_indices = np.argsort(-corr_scores)[: self.num_p2p_corrs // len(node_corrs)]
                 ref_corr_points = ref_corr_points[sel_indices]
                 src_corr_points = src_corr_points[sel_indices]
+                corr_scores = corr_scores[sel_indices]
             
-            # print(src_corr_points.shape, ref_corr_points.shape, node_corr)
             point_corrs['src'].append(src_corr_points)
             point_corrs['ref'].append(ref_corr_points)
             point_corrs['scores'].append(corr_scores)
@@ -159,30 +168,36 @@ class RegistrationEvaluator(abc.ABC):
         
         point_corrs['src'] = np.concatenate(point_corrs['src'])
         point_corrs['ref'] = np.concatenate(point_corrs['ref'])
+        point_corrs['scores'] = np.concatenate(point_corrs['scores'])
 
         corrs_ransac = np.concatenate([point_corrs['src'], point_corrs['ref']], axis=1)
+        # corrs_ransac = corrs_ransac[np.where(point_corrs['scores'] > 0.5)]
         
-        if corrs_ransac.shape[0] > self.num_p2p_corrs:
-            corr_sel_indices = np.random.choice(corrs_ransac.shape[0], self.num_p2p_corrs)
-            corrs_ransac = corrs_ransac[corr_sel_indices]
+        min_coordinates = np.min(corrs_ransac, axis=0)
+        transformed_corrs_ransac = corrs_ransac - min_coordinates
         
-        est_transform, _ = pygcransac.findRigidTransform(np.ascontiguousarray(corrs_ransac), probabilities = [], 
-                                                         threshold = self.ransac_threshold, neighborhood_size = 4, sampler = 1, 
-                                                         min_iters = self.ransac_min_iters, max_iters = self.ransac_max_iters, 
-                                                         spatial_coherence_weight = 0.0, 
-                                                         use_space_partitioning = not self.ransac_use_sprt, neighborhood = 0, conf = 0.999, 
-                                                         use_sprt = self.ransac_use_sprt)
+        est_transform, _ = pygcransac.findRigidTransform(np.ascontiguousarray(transformed_corrs_ransac), probabilities = [], 
+                                                        threshold = self.ransac_threshold, neighborhood_size = 4, sampler = 1, 
+                                                        min_iters = self.ransac_min_iters, max_iters = self.ransac_max_iters, 
+                                                        spatial_coherence_weight = 0.0, 
+                                                        use_space_partitioning = not self.ransac_use_sprt, neighborhood = 0, conf = 0.999, 
+                                                        use_sprt = self.ransac_use_sprt)
+        
+        T1 = np.array([[1,0,0,0], [0,1,0,0], [0,0,1,0], [-min_coordinates[0], -min_coordinates[1], -min_coordinates[2], 1]])
+        T2inv = np.array([[1,0,0,0], [0,1,0,0], [0,0,1,0], [min_coordinates[3], min_coordinates[4], min_coordinates[5], 1]])
+        
         if est_transform is None: return None
+        
+        est_transform = T1 @ est_transform @ T2inv
         est_transform = est_transform.T
-
+        
         if not evaluate_registration: return est_transform
 
         chamfer_distance, inlier_ratio, rre, rte, recall, fmr = self.evaluate_registration(src_points, ref_points, raw_points, 
                                                                                             est_transform, gt_transform, 
-                                                                                            src_corr_points, ref_corr_points, 
+                                                                                            corrs_ransac[:, :3], corrs_ransac[:, 3:], 
                                                                                             gt_src_corr_points, gt_ref_corr_points)
-    
-        if recall == 0.0: return None
+
         return {
             'CD' : chamfer_distance,
             'IR' : inlier_ratio,
@@ -191,10 +206,15 @@ class RegistrationEvaluator(abc.ABC):
             'recall' : recall,
             'FMR' : fmr
         }
+        
 
     def run_registration(self, reg_data_dict):
         normal_reg_results_dict = self.run_normal_registration(reg_data_dict)
         if normal_reg_results_dict is None: return None, None
         aligner_reg_results_dict = self.run_aligner_registration(reg_data_dict)
+        
+        # print('\n', aligner_reg_results_dict)
+        # print('\n', normal_reg_results_dict)
+        # print('====')
         
         return normal_reg_results_dict, aligner_reg_results_dict

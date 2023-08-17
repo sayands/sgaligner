@@ -60,9 +60,9 @@ class Trainer(EpochBasedTrainer):
     def create_model(self):
         model = MultiModalEncoder(modules = self.modules, rel_dim = self.rel_dim, attr_dim=self.attr_dim).to(self.device)
         
-        if len(self.modules) > 1:
-            self.multi_loss_layer_icl = CustomMultiLossLayer(loss_num=len(self.modules), device=self.device)
-            self.multi_loss_layer_ial = CustomMultiLossLayer(loss_num=len(self.modules), device=self.device)
+        # if len(self.modules) > 1:
+        self.multi_loss_layer_icl = CustomMultiLossLayer(loss_num=len(self.modules), device=self.device)
+        self.multi_loss_layer_ial = CustomMultiLossLayer(loss_num=len(self.modules), device=self.device)
 
         message = 'Model created'
         self.logger.info(message)

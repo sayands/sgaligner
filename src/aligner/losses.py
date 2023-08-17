@@ -112,6 +112,9 @@ class OverallLoss(nn.Module):
         self.contrastive_multi_loss_layer = icl_loss_layer
 
     def forward(self, output_dict, data_dict):
+        total_align_loss = 0.0
+        contrastive_loss_multimodal = 0.0
+        
         # alignment loss
         if len(self.modules) > 1:
             align_losses = []
@@ -133,13 +136,18 @@ class OverallLoss(nn.Module):
             constrastive_loss_unimodal = constrastive_losses_unimodal[0]
 
         # constrastive loss - multi-modal
-        constastive_loss_multimodal = self.contrastive_loss(output_dict['joint'], data_dict)
+        if len(self.modules) > 1:
+            contrastive_loss_multimodal = self.contrastive_loss(output_dict['joint'], data_dict)
 
-        loss = total_align_loss + constrastive_loss_unimodal + constastive_loss_multimodal
+        if len(self.modules) > 1:
+            loss = total_align_loss + constrastive_loss_unimodal + contrastive_loss_multimodal
+        else:
+            loss = constrastive_loss_unimodal
+        
         return {
             'loss': loss,
             'icl_loss_unimodal': constrastive_loss_unimodal,
-            'icl_loss_multimodal' : constastive_loss_multimodal,
+            'icl_loss_multimodal' : contrastive_loss_multimodal,
             'ial_loss': total_align_loss,
         }
 

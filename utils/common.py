@@ -28,7 +28,7 @@ def load_json(filename):
 
 def write_json(data_dict, filename):
     json_obj = json.dumps(data_dict, indent=4)
- 
+
     with open(filename, "w") as outfile:
         outfile.write(json_obj)
 
@@ -82,16 +82,13 @@ def merge_duplets(duplets):
         merged_set.append(sorted(list(set(merge))))
     return merged_set
 
-
-
-
-
-
-
-
 def update_dict(dictionary, to_add_dict):
     for key in dictionary.keys():
-        dictionary[key].append(to_add_dict[key])
+        if key in ['RRE', 'RTE'] and to_add_dict['recall'] > 0.0:
+            dictionary[key].append(to_add_dict[key])
+        else:
+            dictionary[key].append(to_add_dict[key])
+    
     return dictionary
 
 def get_log_string(result_dict, name=None, epoch=None, max_epoch=None, iteration=None, max_iteration=None, lr=None, timer=None):

@@ -5,6 +5,7 @@ import tqdm
 
 import ipdb
 import torch
+import sys
 
 
 from engine.base_trainer import BaseTrainer
@@ -26,6 +27,7 @@ class EpochBasedTrainer(BaseTrainer):
             grad_acc_steps=grad_acc_steps,
         )
         self.max_epoch = cfg.optim.max_epoch
+        self.best_val_loss = sys.float_info.max
     
     def before_train_step(self, epoch, iteration, data_dict) -> None:
         pass
@@ -127,9 +129,6 @@ class EpochBasedTrainer(BaseTrainer):
             self.scheduler.step()
         # snapshot
         self.save_snapshot(f'epoch-{self.epoch}.pth.tar')
-        if not self.save_all_snapshots:
-            last_snapshot = f'epoch-{self.epoch - 1}.pth.tar'
-            if osp.exists(last_snapshot): os.remove(last_snapshot)
 
     def inference_epoch(self):
         self.set_eval_mode()
@@ -163,9 +162,14 @@ class EpochBasedTrainer(BaseTrainer):
         
         summary_dict = summary_board.summary()
         message = '[Val] ' + get_log_string(summary_dict, epoch=self.epoch, timer=timer)
+        val_loss = result_dict['loss']
+        if val_loss < self.best_val_loss:
+            self.best_val_loss = val_loss
+            self.save_snapshot(f'best_snapshot.pth.tar')
+
         self.logger.critical(message)
         self.write_event('val', summary_dict, self.epoch)
-        __class__.set_train_mode(self)
+        self.set_train_mode()
     
     def set_train_mode(self):
         self.training = True

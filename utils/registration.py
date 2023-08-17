@@ -20,7 +20,7 @@ def compute_inlier_ratio(ref_corr_points, src_corr_points, transform, positive_r
     r"""Computing the inlier ratio between a set of correspondences."""
     src_corr_points = apply_transform(src_corr_points, transform)
     residuals = np.sqrt(((ref_corr_points - src_corr_points) ** 2).sum(1))
-    inlier_ratio = np.mean(residuals < positive_radius)
+    inlier_ratio = np.mean(residuals < positive_radius)    
     return inlier_ratio
 
 def compute_registration_rmse(ref_points, src_points, transform):

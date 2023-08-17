@@ -18,6 +18,7 @@ class Scan3RDataset(data.Dataset):
         self.anchor_type_name = cfg.preprocess.anchor_type_name
         self.model_name = cfg.model_name
         self.scan_type = cfg.scan_type
+        self.data_root_dir = cfg.data.root_dir
         
         scan_dirname = '' if self.scan_type == 'scan' else 'out'
         scan_dirname = osp.join(scan_dirname, 'predicted') if self.use_predicted else scan_dirname

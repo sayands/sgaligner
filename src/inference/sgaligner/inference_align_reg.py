@@ -8,6 +8,7 @@ import sys
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(parent_dir)
 sys.path.append('.')
+sys.path.append('GeoTransformer')
 
 from engine.single_tester import SingleTester
 from engine.registration_evaluator import RegistrationEvaluator
@@ -31,7 +32,7 @@ class AlignerRegTester(SingleTester):
 
         # Metrics params
         self.all_k = cfg.metrics.all_k
-        self.alignment_metrics_meter = {'mrr' : []}
+        self.alignment_metrics_meter = {'mrr' : [], 'sgar' : {}}
         for k in self.all_k:
             self.alignment_metrics_meter[k] = {'correct' : 0, 'total' : 0}
         
@@ -153,9 +154,9 @@ class AlignerRegTester(SingleTester):
                     overlap = data_dict['overlap'][batch_idx]
                     scan_id = src_scan_id[:src_scan_id.index('_')]
 
-                    src_points, src_plydata = scan3r.load_plydata_npy(osp.join(self.test_dataset.subscans_scenes_dir, src_scan_id, 'data.npy'), obj_ids=None, return_ply_data=True)
-                    ref_points, ref_plydata = scan3r.load_plydata_npy(osp.join(self.test_dataset.subscans_scenes_dir, ref_scan_id, 'data.npy'), obj_ids=None, return_ply_data=True)
-                    raw_points = scan3r.load_plydata_npy(osp.join(self.test_dataset.scans_scenes_dir, scan_id, 'data.npy'))
+                    src_points, src_plydata = scan3r.load_plydata_npy(osp.join(self.test_dataset.scans_scenes_dir, src_scan_id, 'data.npy'), obj_ids=None, return_ply_data=True)
+                    ref_points, ref_plydata = scan3r.load_plydata_npy(osp.join(self.test_dataset.scans_scenes_dir, ref_scan_id, 'data.npy'), obj_ids=None, return_ply_data=True)
+                    raw_points = scan3r.load_plydata_npy(osp.join(self.test_dataset.data_root_dir, 'scenes', scan_id, 'data.npy'))
                     
                     reg_data_dict = dict()
                     reg_data_dict['node_corrs'] = node_corrs
