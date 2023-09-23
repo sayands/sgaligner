@@ -4,7 +4,7 @@ num_workers : 4
 model_name    : 'sgaligner'
 modules       : ['point', 'gat', 'rel', 'attr']
 use_predicted : False
-registration  : True
+registration  : False
 scan_type     : 'subscan'
 
 data :

@@ -97,7 +97,7 @@ class AlignerRegTester(SingleTester):
         
     def eval_step(self, iteration, data_dict, output_dict):
         data_dict = torch_util.release_cuda(data_dict)
-        embedding = output_dict['joint'] if len(self.modules) > 1 else embedding[self.modules[0]]
+        embedding = output_dict['joint'] if len(self.modules) > 1 else output_dict[self.modules[0]]
 
         e1i_start_idx = 0
         e2i_start_idx = 0
