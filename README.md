@@ -32,6 +32,7 @@ SGAligner aligns 3D scene graphs of environments using multi-modal learning and 
 
 ```
 ├── sgaligner
+│   ├── example-data                  <- examples of data generated post preprocessing
 │   ├── data-preprocessing            <- subscan generation + preprocessing
 │   ├── configs                       <- configuration files
 │   ├── src
