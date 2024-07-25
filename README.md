@@ -18,7 +18,7 @@ SGAligner aligns 3D scene graphs of environments using multi-modal learning and 
 
 </div>
 
-[[Project Webpage](https://sayandebsarkar.com/sgaligner/)]
+[[Project Webpage](https://sayands.github.io/sgaligner/)]
 [[Paper](https://arxiv.org/abs/2304.14880)]
 
 
@@ -62,6 +62,7 @@ git clone --recurse-submodules -j8 git@github.com:sayands/sgaligner.git
 cd sgaligner
 conda env create -f req.yml
 ```
+> Note: Please follow [PointCloudTransformer](https://github.com/qinglew/PointCloudTransformer) repository for installing pointnet2_ops_lib if you want to use PCT as the backbone.
 
 Please follow the submodule for additional installation requirements and setup of [GeoTransformer](https://github.com/sayands/GeoTransformer).
 
@@ -183,12 +184,14 @@ We provide detailed results and comparisons here.
 
 
 ## BibTeX :pray:
-```
-@article{sarkar2023sgaligner,
-      title={SGAligner : 3D Scene Alignment with Scene Graphs}, 
-      author={Sayan Deb Sarkar and Ondrej Miksik and Marc Pollefeys and Daniel Barath and Iro Armeni},
-      journal={Proceedings of the IEEE International Conference on Computer Vision (ICCV)},
-      year={2023}
+```bibtex
+@inproceedings{Sarkar_2023_ICCV,
+    author    = {Sarkar, Sayan Deb and Miksik, Ondrej and Pollefeys, Marc and Barath, Daniel and Armeni, Iro},
+    title     = {SGAligner: 3D Scene Alignment with Scene Graphs},
+    booktitle = {Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)},
+    month     = {October},
+    year      = {2023},
+    pages     = {21927-21937}
 }
 ```
 ## Acknowledgments :recycle:
