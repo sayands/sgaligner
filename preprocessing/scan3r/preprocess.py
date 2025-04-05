@@ -9,10 +9,10 @@ import random
 import sys
 sys.path.append('.')
 
-from utils import define, common, point_cloud, label_mapping
+from utils import define, common, point_cloud
 from configs import config, update_config
 
-REL2IDX_SCANNET8 = common.name2idx(osp.join(define.SCAN3R_ORIG_DIR, 'files/scannet8_relationships.txt'))
+REL2IDX = common.name2idx(osp.join(define.SCAN3R_ORIG_DIR, 'files/relationships.txt'))
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -49,7 +49,7 @@ def process_scan(data_dir, rel_data, obj_data, args, cfg, rel2idx):
     objects_attributes = []
     barry_centers = []
 
-    ply_data = np.load(osp.join(data_dir, 'scenes', scan_id, 'data.npy'))
+    ply_data = np.load(osp.join(data_dir, 'scans', scan_id, 'data.npy'))
     points = np.stack([ply_data['x'], ply_data['y'], ply_data['z']]).transpose((1, 0))
 
     object_points = {}
@@ -72,7 +72,7 @@ def process_scan(data_dir, rel_data, obj_data, args, cfg, rel2idx):
             orig_objects_ids.append(int(object['id'])) 
     
     for idx, object in enumerate(object_data):
-        if not cfg.use_predicted : attribute = [item for sublist in object['attributes'].values() for item in sublist]
+        attribute = [item for sublist in object['attributes'].values() for item in sublist]
 
         object_id = int(object['id'])
         object_id_for_pcl = int(object['id'])
@@ -87,7 +87,8 @@ def process_scan(data_dir, rel_data, obj_data, args, cfg, rel2idx):
         obj_pcl = points[obj_pt_idx]
 
 
-        if obj_pcl.shape[0] < cfg.preprocess.min_obj_points: continue
+        if obj_pcl.shape[0] < cfg.preprocess.min_obj_points: 
+            continue
         
         hull = ConvexHull(obj_pcl)
         cx = np.mean(hull.points[hull.vertices,0])
@@ -102,7 +103,7 @@ def process_scan(data_dir, rel_data, obj_data, args, cfg, rel2idx):
         objects_ids.append(object_id)
         global_objects_ids.append(global_object_id)
         objects_cat.append(global_object_id)
-        if not cfg.use_predicted : objects_attributes.append(attribute)
+        objects_attributes.append(attribute)
     
     for pc_resolution in object_points.keys():
         object_points[pc_resolution] = np.array(object_points[pc_resolution])
@@ -135,27 +136,27 @@ def process_scan(data_dir, rel_data, obj_data, args, cfg, rel2idx):
         rel_id = int(triple[2])  
         rel_name = triple[3]
 
-        if rel_name in list(rel2idx.keys()):
-            rel_id = int(rel2idx[rel_name])
-            
-            if sub in objects_ids and obj in objects_ids:
-                if args.change_edge_semantic and idx in rel_change_indices:
+        assert rel_name in list(rel2idx.keys()), 'Error: f{rel_name} not found'
+        rel_id = int(rel2idx[rel_name])
+        
+        if sub in objects_ids and obj in objects_ids:
+            if args.change_edge_semantic and idx in rel_change_indices:
+                rel_name_changed = np.random.choice(choose_from_rels)
+                while rel_name == rel_name_changed:
                     rel_name_changed = np.random.choice(choose_from_rels)
-                    while rel_name == rel_name_changed:
-                        rel_name_changed = np.random.choice(choose_from_rels)
-                    
-                    rel_name = rel_name_changed
-                    rel_id = rel2idx[rel_name]
                 
-                if rel_name == 'inside':
-                    assert False
-                
-                assert rel_id <= len(rel2idx)
-                triples.append([sub, obj, rel_id])
-                edges_cat.append(rel2idx[rel_name])
-                
-                if triple[:2] not in pairs:
-                    pairs.append([sub, obj])
+                rel_name = rel_name_changed
+                rel_id = rel2idx[rel_name]
+            
+            if rel_name == 'inside':
+                assert False
+            
+            assert rel_id <= len(rel2idx)
+            triples.append([sub, obj, rel_id])
+            edges_cat.append(rel2idx[rel_name])
+            
+            if triple[:2] not in pairs:
+                pairs.append([sub, obj])
 
     if len(pairs) == 0:
         return -1
@@ -174,7 +175,8 @@ def process_scan(data_dir, rel_data, obj_data, args, cfg, rel2idx):
     
     for i in objects_ids:
         for j in objects_ids:
-            if i == j or [i, j] in pairs: continue
+            if i == j or [i, j] in pairs: 
+                continue
             triples.append([i, j, rel2idx['none']]) # supplement the 'none' relation
             pairs.append(([i, j]))
             edges_cat.append(rel2idx['none'])
@@ -210,12 +212,14 @@ def process_scan(data_dir, rel_data, obj_data, args, cfg, rel2idx):
 
 def process_data(args, cfg, rel2idx):
     mode = args.mode
-    use_predicted = cfg.use_predicted
     scan_type = cfg.scan_type
     anchor_type_name = cfg.preprocess.anchor_type_name
-    out_dirname = '' if scan_type == 'scan' else 'out'
-    out_dirname = osp.join(out_dirname, 'predicted') if use_predicted else out_dirname
-    data_dir = osp.join(cfg.data.root_dir, out_dirname)
+    
+    if scan_type == 'scan':
+        data_dir = cfg.data.root_dir
+    else:
+        data_dir = cfg.data.subscan_dir
+
     data_write_dir = osp.join(data_dir, 'files', mode)
     common.ensure_dir(data_write_dir)
     common.ensure_dir(osp.join(data_write_dir, 'data'))
@@ -238,7 +242,8 @@ def process_data(args, cfg, rel2idx):
         rel_data = [rel_data for rel_data in rel_json if rel_data['scan'] == subscan_id][0]
         data_dict = process_scan(data_dir, rel_data, obj_data, args, cfg, rel2idx)
         
-        if type(data_dict) == int: continue
+        if type(data_dict) is int: 
+            continue
 
         subscan_ids_processed.append(subscan_id)
         common.write_pkl_data(data_dict, osp.join(data_write_dir, 'data', data_dict['scan_id'] + '.pkl'))
@@ -359,11 +364,11 @@ if __name__ == '__main__':
     _, args = parse_args()
     cfg = update_config(config, args.config, ensure_dir=False)
     random.seed(cfg.seed)
-    rel2idx = REL2IDX_SCANNET8
+    rel2idx = REL2IDX
     
     print('======== Scan3R preprocessing with Scene Graphs using config file : {} ========'.format(args.config))
     data_dir, data_write_dir, mode = process_data(args, cfg, rel2idx)
 
     common.ensure_dir(data_write_dir)
-    if not cfg.use_predicted : calculate_bow_node_attr_feats(data_write_dir)
+    calculate_bow_node_attr_feats(data_write_dir)
     calculate_bow_node_edge_feats(data_write_dir, rel2idx)

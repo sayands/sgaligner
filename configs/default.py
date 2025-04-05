@@ -12,18 +12,17 @@ _C.model_name = ''
 _C.modules = []
 _C.registration = False
 _C.modality = ''
-_C.use_predicted = False
 _C.scan_type = 'subscan'
 
 # path params
 _C.data = CN()
 _C.data.name = 'Scan3R'
 _C.data.root_dir = ''
+_C.data.subscan_dir = ''
 _C.data.label_file_name = ''
 _C.data.ply_subfix = ''
 _C.data.seg_subfix = ''
 _C.data.aggre_subfix = ''
-_C.data.pred_subfix = ''
 
 # preprocess params
 _C.preprocess = CN()
@@ -31,14 +30,6 @@ _C.preprocess.pc_resolutions = [512] # [32, 64, 128, 256, 512]
 _C.preprocess.subscenes_per_scene = 7
 _C.preprocess.min_obj_points = 50
 _C.preprocess.anchor_type_name = ''
-_C.preprocess.label_type = 'Scannet20'
-_C.preprocess.search_method = 'BBOX'
-_C.preprocess.radius_receptive = 0.5
-_C.preprocess.max_distance = 0.1
-_C.preprocess.filter_segment_size = 512
-_C.preprocess.filter_corr_thres = 0.5
-_C.preprocess.filter_occ_ratio = 0.75
-_C.preprocess.name_same_segment = 'same part'
 
 # Training params
 _C.train = CN()

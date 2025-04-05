@@ -156,7 +156,7 @@ class AlignerRegTester(SingleTester):
 
                     src_points, src_plydata = scan3r.load_plydata_npy(osp.join(self.test_dataset.scans_scenes_dir, src_scan_id, 'data.npy'), obj_ids=None, return_ply_data=True)
                     ref_points, ref_plydata = scan3r.load_plydata_npy(osp.join(self.test_dataset.scans_scenes_dir, ref_scan_id, 'data.npy'), obj_ids=None, return_ply_data=True)
-                    raw_points = scan3r.load_plydata_npy(osp.join(self.test_dataset.data_root_dir, 'scenes', scan_id, 'data.npy'))
+                    raw_points = scan3r.load_plydata_npy(osp.join(self.test_dataset.data_root_dir, 'scans', scan_id, 'data.npy'))
                     
                     reg_data_dict = dict()
                     reg_data_dict['node_corrs'] = node_corrs

@@ -2,26 +2,24 @@ seed: 42
 num_workers : 4
 
 model_name    : 'sgaligner'
-modules       : ['point', 'gat', 'rel', 'attr']
-use_predicted : False
+modules       : ['pct', 'gat', 'rel', 'attr']
 registration  : False
 scan_type     : 'subscan'
 
 data :
   name            : Scan3R
-  root_dir        : /media/sdebsarkar/extra-hdd/datasets/3RScan
+  root_dir        : /drive/datasets/Scan3R
+  subscan_dir      : /drive/dumps/sgaligner/subscans/Scan3R
   label_file_name : labels.instances.align.annotated.v2.ply
-  pred_subfix     : inseg.ply
 
 preprocess :
-  pc_resolutions      : [64, 128, 256, 512]
+  pc_resolutions      : [512]
   subscenes_per_scene : 7
-  filter_segment_size : 512
   min_obj_points      : 50
   anchor_type_name    : '' 
 
 model :
-  rel_dim             : 9
+  rel_dim             : 41
   attr_dim            : 164
   alignment_thresh    : 0.4
 
@@ -32,6 +30,3 @@ val :
   batch_size          : 4
   overlap_low         : 0.0
   overlap_high        : 0.0
-
-val :
-  pc_res : 512

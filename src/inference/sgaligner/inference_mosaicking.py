@@ -89,11 +89,11 @@ class MosaickTester(SingleTester):
         # Paths 
         self.scans_dir = osp.join(cfg.data_dir)
         self.scans_files_dir = osp.join(self.scans_dir, 'files')
-        self.scans_scenes_dir = osp.join(self.scans_dir, 'scenes')
+        self.scans_scenes_dir = osp.join(self.scans_dir, 'scans')
 
         self.subscans_dir = osp.join(self.scans_dir, 'out')
         self.subscans_files_dir = osp.join(self.subscans_dir, 'files')
-        self.subscans_scenes_dir = osp.join(self.subscans_dir, 'scenes')
+        self.subscans_scenes_dir = osp.join(self.subscans_dir, 'scans')
 
         # Data - load scan-subscan mapping
         self.data_mode = cfg.val.data_mode

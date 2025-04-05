@@ -2,7 +2,6 @@ import os.path as osp
 import os
 import numpy as np
 import random
-import matplotlib.pyplot as plt
 from tqdm import tqdm
 import itertools
 
@@ -15,15 +14,12 @@ from utils.logger import Logger
 class SubGenScan3R(Dataset):
     ''' Subset Generation from 3RScan dataset '''
     def __init__(self, cfg, split='train'):
-        self.predicted = cfg.use_predicted
-        self.scene_dir = osp.join(cfg.data.root_dir, 'scenes')
+        self.scene_dir = osp.join(cfg.data.root_dir, 'scans')
         
-        file_dirname = 'files/predicted' if self.predicted else 'files'
-        self.file_dir = osp.join(cfg.data.root_dir, file_dirname) 
+        self.file_dir = osp.join(cfg.data.root_dir, 'files') 
         
-        out_dirname = 'out/predicted' if self.predicted else 'out' 
-        self.out_dir = osp.join(cfg.data.root_dir, out_dirname)
-        self.scene_out_dir = osp.join(self.out_dir, 'scenes')
+        self.out_dir = cfg.data.subscan_dir
+        self.scene_out_dir = osp.join(self.out_dir, 'scans')
         self.file_out_dir = osp.join(self.out_dir, 'files')
         self.split = split
 
@@ -48,19 +44,18 @@ class SubGenScan3R(Dataset):
         self.obj_pt_scene_thresh = cfg.preprocess.min_obj_points
         self.logger.info('[INFO] Loaded {} {} scan data...'.format(self.__len__(), self.split))
         
-        self.label_file_name = 'labels.instances.align.annotated.v2.ply' if not self.predicted else 'inseg_filtered.ply'
+        self.label_file_name = 'labels.instances.align.annotated.v2.ply'
         self.save_name = 'data.npy'
-        self.skip = None if not self.predicted else 5
+        self.skip = None
 
     def gen_scene_graph(self, scan_id, idx, ply_data, visible_pts_mask):
         obj_json_scan = [scan_obj for scan_obj in self.scan_objs if scan_obj['scan'] == scan_id][0]['objects']
 
         subscan_id = '{}_{}'.format(scan_id, idx)
-        visible_pts_idx = np.where(visible_pts_mask == True)[0]
+        visible_pts_idx = np.where(visible_pts_mask)[0]
         
         # Get visible points, colors and object IDs
-        visible_pcl_data, visible_pts_obj_ids = scan3r.create_ply_data(ply_data, visible_pts_idx) if not self.predicted \
-                                                else scan3r.create_ply_data_predicted(ply_data, visible_pts_idx)
+        visible_pcl_data, visible_pts_obj_ids = scan3r.create_ply_data(ply_data, visible_pts_idx)
         unique_visible_pts_obj_ids = np.unique(visible_pts_obj_ids)
 
         subscan_obj = [scan_obj for scan_obj in obj_json_scan if int(scan_obj['id']) in unique_visible_pts_obj_ids]
@@ -177,7 +172,8 @@ class SubGenScan3R(Dataset):
         # Load scene pcl
         ply_data = scan3r.load_ply_data(self.scene_dir, scan_id, self.label_file_name)
         scene_pts = np.stack((ply_data['vertex']['x'], ply_data['vertex']['y'], ply_data['vertex']['z'])).transpose()
-        if scene_pts.shape[0] == 0: return
+        if scene_pts.shape[0] == 0: 
+            return
         
         scene_pcd = open3d.make_open3d_point_cloud(visualisation.remove_ceiling(scene_pts))
 

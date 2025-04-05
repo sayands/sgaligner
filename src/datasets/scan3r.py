@@ -1,4 +1,3 @@
-import os
 import os.path as osp
 import numpy as np
 
@@ -13,18 +12,18 @@ from utils import common, scan3r
 class Scan3RDataset(data.Dataset):
     def __init__(self, cfg, split):
         self.split = split
-        self.use_predicted = cfg.use_predicted
         self.pc_resolution = cfg.val.pc_res if split == 'val' else cfg.train.pc_res
         self.anchor_type_name = cfg.preprocess.anchor_type_name
         self.model_name = cfg.model_name
         self.scan_type = cfg.scan_type
         self.data_root_dir = cfg.data.root_dir
         
-        scan_dirname = '' if self.scan_type == 'scan' else 'out'
-        scan_dirname = osp.join(scan_dirname, 'predicted') if self.use_predicted else scan_dirname
-
-        self.scans_dir = osp.join(cfg.data.root_dir, scan_dirname)
-        self.scans_scenes_dir = osp.join(self.scans_dir, 'scenes')
+        if self.scan_type == 'scan':
+            self.scans_dir = cfg.data.root_dir
+        else:
+            self.scans_dir = cfg.data.subscan_dir
+        
+        self.scans_scenes_dir = osp.join(self.scans_dir, 'scans')
         self.scans_files_dir = osp.join(self.scans_dir, 'files')
         
         self.mode = 'orig' if self.split == 'train' else cfg.val.data_mode
@@ -109,12 +108,7 @@ class Scan3RDataset(data.Dataset):
 
         tot_object_points = torch.cat([torch.from_numpy(src_object_points), torch.from_numpy(ref_object_points)]).type(torch.FloatTensor)
         tot_bow_vec_obj_edge_feats = torch.cat([torch.from_numpy(src_data_dict['bow_vec_object_edge_feats']), torch.from_numpy(ref_data_dict['bow_vec_object_edge_feats'])])
-        if not self.use_predicted:
-            tot_bow_vec_obj_attr_feats = torch.cat([torch.from_numpy(src_data_dict['bow_vec_object_attr_feats']), torch.from_numpy(ref_data_dict['bow_vec_object_attr_feats'])])
-        
-        else:
-            tot_bow_vec_obj_attr_feats = torch.zeros(tot_object_points.shape[0], 41)
-        
+        tot_bow_vec_obj_attr_feats = torch.cat([torch.from_numpy(src_data_dict['bow_vec_object_attr_feats']), torch.from_numpy(ref_data_dict['bow_vec_object_attr_feats'])])
         tot_rel_pose = torch.cat([torch.from_numpy(src_data_dict['rel_trans']), torch.from_numpy(ref_data_dict['rel_trans'])])
 
         data_dict = {} 

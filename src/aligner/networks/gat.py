@@ -34,7 +34,7 @@ class MultiGAT(nn.Module):
         # in_channels, out_channels, heads
         for i in range(self.num_layers):
             in_channels = n_units[i] * n_heads[i-1] if i else n_units[i]
-            layer_stack.append(GATConv(in_channels=in_channels, out_channels=n_units[i+1], cached=False, heads=n_heads[i]))
+            layer_stack.append(GATConv(in_channels=in_channels, out_channels=n_units[i+1], heads=n_heads[i]))
         
         self.layer_stack = nn.ModuleList(layer_stack)
     def forward(self, x, edges):

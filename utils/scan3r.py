@@ -2,7 +2,7 @@ import os.path as osp
 import numpy as np
 import json
 from glob import glob
-from plyfile import PlyData, PlyElement
+from plyfile import PlyData
 
 def get_scan_ids(dirname, split):
     filepath = osp.join(dirname, '{}_scans.txt'.format(split))
@@ -100,16 +100,18 @@ def load_plydata_npy(file_path, obj_ids = None, return_ply_data = False):
     points =  np.stack([ply_data['x'], ply_data['y'], ply_data['z']]).transpose((1, 0))
 
     if obj_ids is not None:
-        if type(obj_ids) == np.ndarray:
+        if type(obj_ids) is np.ndarray:
             obj_ids_pc = ply_data['objectId']
             obj_ids_pc_mask = np.isin(obj_ids_pc, obj_ids)
-            points = points[np.where(obj_ids_pc_mask == True)[0]]
+            points = points[np.where(obj_ids_pc_mask)[0]]
         else:
             obj_ids_pc = ply_data['objectId']
             points = points[np.where(obj_ids_pc == obj_ids)[0]]
     
-    if return_ply_data: return points, ply_data
-    else: return points
+    if return_ply_data: 
+        return points, ply_data
+    else: 
+        return points
 
 def find_cam_centers(frame_idxs, frame_poses):
     cam_centers = []
@@ -124,20 +126,6 @@ def find_cam_centers(frame_idxs, frame_poses):
 
     cam_centers = np.array(cam_centers).reshape((-1, 3))
     return cam_centers
-
-def create_ply_data_predicted(ply_data, visible_pts_idx):
-    x = ply_data['vertex']['x'][visible_pts_idx]
-    y = ply_data['vertex']['y'][visible_pts_idx]
-    z = ply_data['vertex']['z'][visible_pts_idx]
-    object_id = ply_data['vertex']['label'][visible_pts_idx]
-
-    vertices = np.empty(len(visible_pts_idx), dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('objectId', 'h')])
-    vertices['x'] = x.astype('f4')
-    vertices['y'] = y.astype('f4')
-    vertices['z'] = z.astype('f4')
-    vertices['objectId'] = object_id.astype('h')
-
-    return vertices, object_id
 
 def create_ply_data(ply_data, visible_pts_idx):
     x = ply_data['vertex']['x'][visible_pts_idx]

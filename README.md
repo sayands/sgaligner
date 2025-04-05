@@ -1,5 +1,5 @@
 <div align='center'>
-<h2 align="center"> SGAligner : 3D Scene Alignment with Scene Graphs </h2>
+<h2 align="center"> SGAligner: 3D Scene Alignment with Scene Graphs </h2>
 <h3 align="center">ICCV 2023</h3>
 
 <a href="https://sayands.github.io/">Sayan Deb Sarkar</a><sup>1</sup>, <a href="https://miksik.co.uk/">Ondrej Miksik</a><sup>2</sup>, <a href="https://people.inf.ethz.ch/marc.pollefeys/">Marc Pollefeys</a><sup>1,2</sup>, <a href="https://www.linkedin.com/in/d%C3%A1niel-bar%C3%A1th-3a489092/">Daniel Barath</a><sup>1</sup>, <a href="https://ir0.github.io/">Iro Armeni</a><sup>1</sup>
@@ -24,7 +24,7 @@ SGAligner aligns 3D scene graphs of environments using multi-modal learning and 
 
 ## News :newspaper:
 
-* **14. July 2023** : SGAligner accepted to ICCV 2023. :fire:
+* **14. July 2023**: SGAligner accepted to ICCV 2023. :fire:
 * **1. May 2023**: [SGAligner preprint](https://arxiv.org/abs/2304.14880v1) released on arXiv.
 * **10. April 2023**: Code released.
 
@@ -67,7 +67,7 @@ conda env create -f req.yml
 Please follow the submodule for additional installation requirements and setup of [GeoTransformer](https://github.com/sayands/GeoTransformer).
 
 ### Downloads :droplet:
-The pre-trained model and other meta files are available [here](https://drive.google.com/drive/folders/1elqdbYD5T2686r42lcUHE6SyiFnDsZur?usp=sharing).
+The pre-trained model and other meta files are available [here](https://drive.google.com/drive/folders/10-JNxWLxPFQ2q6_zY-9HXIO-Qx-vhmmT?usp=sharing).
 
 ### Dataset Generation :hammer:
 After installing the dependencies, we preprocess the datasets and provide the benchmarks. 
@@ -101,8 +101,6 @@ To generate overlapping and non-overlapping pairs, use :
 python preprocessing/gen_all_pairs_fileset.py
 ```
 This will create a fileset with the same number of randomly chosen non-overlapping pairs from the generated subscans as overlapping pairs generated before during subscan generation.
-
-Usage on **Predicted Scene Graphs** : Coming Soon! 
 
 ### Training :bullettrain_side:
 To train SGAligner on 3RScan subscans generated from [here](#dataset-generation-hammer), you can use :
@@ -178,7 +176,6 @@ We provide detailed results and comparisons here.
 ## TODO :soon:
 - [X] ~~Add 3D Point Cloud Mosaicking~~
 - [X] ~~Add Support For [EVA](https://github.com/cambridgeltl/eva)~~
-- [ ] Add usage on Predicted Scene Graphs
 - [ ] Add scene graph alignment of local 3D scenes to prior 3D maps
 - [ ] Add overlapping scene finder with a traditional retrieval method (FPFH + VLAD + KNN)
 
