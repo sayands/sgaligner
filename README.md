@@ -24,29 +24,28 @@ SGAligner aligns 3D scene graphs of environments using multi-modal learning and 
 
 ## News :newspaper:
 
-* **14. July 2023**: SGAligner accepted to ICCV 2023. :fire:
-* **1. May 2023**: [SGAligner preprint](https://arxiv.org/abs/2304.14880v1) released on arXiv.
-* **10. April 2023**: Code released.
+- ![](https://img.shields.io/badge/New!-8A2BE2) [2025-04] Codebase updated + Ground truth checkpoints released. 
+- [2023-07] SGAligner accepted to **ICCV 2023**. :fire:
+- [2023-05] We release SGAligner on arXiv with codebase with pre-trained predicted relationship checkpoint. Checkout our [paper](https://arxiv.org/abs/2304.14880v1) and [website](https://sayands.github.io/sgaligner/).
 
 ## Code Structure :clapper:
 
 ```
-├── sgaligner
-│   ├── example-data                  <- examples of data generated post preprocessing
-│   ├── data-preprocessing            <- subscan generation + preprocessing
-│   ├── configs                       <- configuration files
-│   ├── src
-│   │   │── aligner                   <- SGAligner modules
-│   │   │── datasets                  <- dataloader for 3RScan subscans
-│   │   │── engine                    <- trainer classes
-│   │   │── GeoTransformer            <- geotransformer submodule for registration
-│   │   │── inference                 <- inference files for alignment + downstream applications
-│   │   │── trainers                  <- train + validation loop (EVA + SGAligner)
-│   │── utils                         <- util functions
-│   │── README.md                    
-│   │── scripts                       <- bash scripts for data generation + preprocesing + training
-│   └── output                        <- folder that stores models and logs
-│
+sgaligner/
+├── example-data                  <- examples of data generated post preprocessing
+├── data-preprocessing            <- subscan generation + preprocessing
+├── configs                       <- configuration files
+├── src
+│   │── aligner                   <- SGAligner modules
+│   │── datasets                  <- dataloader for 3RScan subscans
+│   │── engine                    <- trainer classes
+│   │── GeoTransformer            <- geotransformer submodule for registration
+│   │── inference                 <- inference files for alignment + downstream applications
+│   │── trainers                  <- train + validation loop (EVA + SGAligner)
+│── utils                         <- util functions
+│── README.md                    
+│── scripts                       <- bash scripts for data generation + preprocesing + training
+└── output                        <- folder that stores models and logs
 ```
 
 ### Dependencies :memo:
@@ -70,23 +69,38 @@ Please follow the submodule for additional installation requirements and setup o
 The pre-trained model and other meta files are available [here](https://drive.google.com/drive/folders/10-JNxWLxPFQ2q6_zY-9HXIO-Qx-vhmmT?usp=sharing).
 
 ### Dataset Generation :hammer:
-After installing the dependencies, we preprocess the datasets and provide the benchmarks. 
+
+#### Data Download And Preparation
+Download 3RScan dataset from the [official website](https://github.com/WaldJohannaU/3RScan) and 3DSSG (accompanying GT scene graph annotation) from the [official website](https://3dssg.github.io/). We use the official (full list of scan ids including reference + rescans) training split from [here](https://campar.in.tum.de/public_datasets/3RScan/train_scans.txt) and validation split from [here](https://campar.in.tum.de/public_datasets/3RScan/val_scans.txt).
+    - Download `3RScan.json` from [here](https://campar.in.tum.de/public_datasets/3RScan/3RScan.json) and `objects.json` from [here](https://campar.in.tum.de/public_datasets/3DSSG/3DSSG/objects.json).
+    - Download the class mapping file `3RScan.v2 Semantic Classes - Mapping.csv` from [here](https://docs.google.com/spreadsheets/d/1eRTJ2M9OHz7ypXfYD-KTR1AIT-CrVLmhJf8mxgVZWnI/edit?gid=0#gid=0).
+
+Follow the steps for data preparation:
+
+1. Move all files of 3DSSG and 3RScan metadata files to the `files/` directory within 3RScan. The structure would look like the following:
+
+```
+Scan3R/
+├── files       <- all 3RScan and 3DSSG meta files (NOT the scan data)  
+│    ├── 3RScan.json
+|    ├── classes.txt
+|    ├── train_scans.txt
+|    ├── val_scans.txt
+|    ├── wordnet_attributes.txt
+|    ├── affordances.txt
+|    ├── attributes.txt
+|    ├── relationships.txt
+|    ├── objects.json
+|    ├── relationships.json
+|    └── obj_attr.pkl
+└── scans       <- scans
+```
+
+2. Generate ``labels.instances.align.annotated.v2.ply`` for each 3RScan scan, please refer to the repo from [here](``https://github.com/ShunChengWu/3DSSG/blob/master/data_processing/transform_ply.py``).
+
+3. Change the absolute paths in ``utils/define.py`` and paths in the config files under `configs/scan3r/`.
 
 #### Subscan Pair Generation - 3RScan + 3DSSG
-Download [3RScan](https://github.com/WaldJohannaU/3RScan) and [3DSSG](https://3dssg.github.io/). Move all files of 3DSSG to a new ``files/`` directory within Scan3R. The structure should be:
-
-```
-├── 3RScan
-│   ├── files       <- all 3RScan and 3DSSG meta files (NOT the scan data)  
-│   ├── scenes      <- scans
-│   └── out         <- Default output directory for generated subscans (created when running pre-processing)
-```
-
-> To generate ``labels.instances.align.annotated.v2.ply`` for each 3RScan scan, please refer to the repo from 
-[here](``https://github.com/ShunChengWu/3DSSG/blob/master/data_processing/transform_ply.py``).
-
-Change the absolute paths in ``utils/define.py``.
-
 First, we create sub-scans from each 3RScan scan using the ground truth scene Graphs from the 3DSSG dataset and then calculate the pairwise overlap ratio for the subscans in a scan. Finally, we preprocess the data for our framework. The relevant code can be found in the ``data-preprocessing/`` directory. You can use the following command to generate the subscans.
 
 ```bash
@@ -172,13 +186,6 @@ We provide detailed results and comparisons here.
 | Ours, K=1 | 0.01677 | 1.425 | 2.88 | 99.85 | 98.79 |
 | Ours, K=2 | 0.01111 | 1.012 | 1.67 | 99.85 | 99.40 |
 | Ours, K=3 | 0.01525 | 1.736 | 2.55 | 99.85 | 98.81 | 
-
-## TODO :soon:
-- [X] ~~Add 3D Point Cloud Mosaicking~~
-- [X] ~~Add Support For [EVA](https://github.com/cambridgeltl/eva)~~
-- [ ] Add scene graph alignment of local 3D scenes to prior 3D maps
-- [ ] Add overlapping scene finder with a traditional retrieval method (FPFH + VLAD + KNN)
-
 
 ## BibTeX :pray:
 ```bibtex
