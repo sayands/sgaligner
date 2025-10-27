@@ -8,18 +8,14 @@
 
 SGAligner aligns 3D scene graphs of environments using multi-modal learning and leverage the output for the downstream task of 3D point cloud registration.
 
-[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/sgaligner-3d-scene-alignment-with-scene/3d-scene-graph-alignment-on-3dssg)](https://paperswithcode.com/sota/3d-scene-graph-alignment-on-3dssg?p=sgaligner-3d-scene-alignment-with-scene)
-[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/sgaligner-3d-scene-alignment-with-scene/point-cloud-registration-on-3rscan)](https://paperswithcode.com/sota/point-cloud-registration-on-3rscan?p=sgaligner-3d-scene-alignment-with-scene)
-
-<a href="https://pytorch.org/get-started/locally/"><img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-ee4c2c?logo=pytorch&logoColor=white"></a>
+ [![arXiv](https://img.shields.io/badge/arXiv-blue?logo=arxiv&color=%23B31B1B)](https://arxiv.org/abs/2304.14880) 
+ [![ProjectPage](https://img.shields.io/badge/Project_Page-SGAligner-blue)](https://sayands.github.io/sgaligner)
+ [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
 ![teaser](https://sayands.github.io/sgaligner/static/images/teaser.png)
 
 
 </div>
-
-[[Project Webpage](https://sayands.github.io/sgaligner/)]
-[[Paper](https://arxiv.org/abs/2304.14880)]
 
 
 ## News :newspaper:
@@ -96,7 +92,7 @@ Scan3R/
 └── scans       <- scans
 ```
 
-2. Generate ``labels.instances.align.annotated.v2.ply`` for each 3RScan scan, please refer to the repo from [here](``https://github.com/ShunChengWu/3DSSG/blob/master/data_processing/transform_ply.py``).
+2. Generate ``labels.instances.align.annotated.v2.ply`` for each 3RScan scan, please refer to the repo from [here](https://github.com/ShunChengWu/3DSSG/blob/master/data_processing/transform_ply.py).
 
 3. Change the absolute paths in ``utils/define.py`` and paths in the config files under `configs/scan3r/`.
 
