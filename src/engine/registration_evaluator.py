@@ -99,7 +99,8 @@ class RegistrationEvaluator(abc.ABC):
         gt_ref_corr_points = reg_data_dict['gt_ref_corr_points'] if 'gt_ref_corr_points' in reg_data_dict else None
 
         output_dict = self.perform_registration(src_points, ref_points, gt_transform)
-        if output_dict is None: return None
+        if output_dict is None: 
+            return None
 
         est_transform = output_dict["estimated_transform"]
         ref_corr_points = output_dict['ref_corr_points']
@@ -147,7 +148,8 @@ class RegistrationEvaluator(abc.ABC):
 
             if node_points_src.shape[0] < self.min_object_points or node_points_ref.shape[0] < self.min_object_points: continue
             output_dict = self.perform_registration(node_points_src, node_points_ref, gt_transform)
-            if output_dict is None: continue
+            if output_dict is None: 
+                continue
             
             output_dict = torch_util.release_cuda(output_dict)
             ref_corr_points = output_dict['ref_corr_points']

@@ -4,12 +4,6 @@ import os.path as osp
 import time
 import numpy as np 
 
-import sys
-parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(parent_dir)
-sys.path.append('.')
-sys.path.append('GeoTransformer')
-
 from engine.single_tester import SingleTester
 from engine.registration_evaluator import RegistrationEvaluator
 from utils import torch_util, scan3r
@@ -85,11 +79,11 @@ class AlignerRegTester(SingleTester):
     def compute_metrics(self, result_dict):
         metrics_dict = {}
         for key in result_dict:
-            if type(key) == int:
+            if type(key) is int:
                 metrics_dict['hits@_{}'.format(key)] = round(result_dict[key]['correct'] / result_dict[key]['total'], 5)
-            elif type(result_dict[key]) == list:
+            elif type(result_dict[key]) is list:
                 metrics_dict[key] = round(np.array(result_dict[key]).mean(), 5)
-            elif type(result_dict[key]) == dict: # sgar
+            elif type(result_dict[key]) is dict: # sgar
                 for mode in result_dict[key]:
                     metrics_dict[key + '_' + mode] = round(np.array(result_dict[key][mode]).mean(), 5)
 

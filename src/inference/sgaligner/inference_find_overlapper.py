@@ -5,11 +5,6 @@ import time
 import numpy as np 
 from sklearn.metrics import confusion_matrix
 
-import sys
-parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(parent_dir)
-sys.path.append('.')
-
 from engine.single_tester import SingleTester
 from engine.registration_evaluator import RegistrationEvaluator
 from utils import torch_util
@@ -60,6 +55,7 @@ class AlignerOverlapper(SingleTester):
         model = MultiModalEncoder(modules = self.modules, rel_dim = self.rel_dim, attr_dim=self.attr_dim).to(self.device)
         message = 'Model created'
         self.logger.info(message)
+        
         return model
     
     def test_step(self, iteration, data_dict):
@@ -102,8 +98,8 @@ class AlignerOverlapper(SingleTester):
             src_scan_id = data_dict['scene_ids'][batch_idx][0]
             ref_scan_id = data_dict['scene_ids'][batch_idx][1]
 
-            src_points = scan3r.load_plydata_npy(osp.join(self.test_dataset.subscans_scenes_dir, src_scan_id, 'data.npy'), obj_ids=None, return_ply_data=False)
-            ref_points = scan3r.load_plydata_npy(osp.join(self.test_dataset.subscans_scenes_dir, ref_scan_id, 'data.npy'), obj_ids=None, return_ply_data=False)
+            src_points = scan3r.load_plydata_npy(osp.join(self.test_dataset.scans_scenes_dir, src_scan_id, 'data.npy'), obj_ids=None, return_ply_data=False)
+            ref_points = scan3r.load_plydata_npy(osp.join(self.test_dataset.scans_scenes_dir, ref_scan_id, 'data.npy'), obj_ids=None, return_ply_data=False)
 
             reg_data_dict = dict()
             reg_data_dict['src_points'] = src_points - pcl_center
@@ -114,6 +110,7 @@ class AlignerOverlapper(SingleTester):
             if corr_score is not None:
                 alignment_score = alignment.compute_alignment_score(rank_list, src_objects_count, ref_objects_count)
                 
+                corr_score = corr_score[1]
                 self.registration_overlapper_data['pred'].append(1.0 if corr_score > self.corr_score_thresh else 0.0)
                 self.registration_overlapper_data['true'].append(1.0 if overlap > 0.0 else 0.0)
                 

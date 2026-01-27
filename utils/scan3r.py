@@ -54,12 +54,21 @@ def load_intrinsics(data_dir, scan_id, type='color'):
     
     return intrinsics
 
-def load_ply_data(data_dir, scan_id, label_file_name):
+def load_ply_data(data_dir, scan_id, label_file_name, matrix=None):
     filename_in = osp.join(data_dir, scan_id, label_file_name)
     file = open(filename_in, 'rb')
-    ply_data = PlyData.read(file)
-    file.close()
-    return ply_data
+    plydata = PlyData.read(file)
+    
+    if matrix is not None:
+        points = np.stack((plydata['vertex']['x'], plydata['vertex']['y'], plydata['vertex']['z'])).transpose()
+        points4f = np.insert(points, 3, values=1, axis=1)
+        points = points4f * matrix
+        
+        plydata['vertex']['x'] = np.asarray(points[:,0]).flatten()
+        plydata['vertex']['y'] = np.asarray(points[:,1]).flatten()
+        plydata['vertex']['z'] = np.asarray(points[:,2]).flatten()
+    
+    return plydata
 
 def load_pose(data_dir, scan_id, frame_id):
     pose_path = osp.join(data_dir, scan_id, 'sequence', 'frame-{}.pose.txt'.format(frame_id))
@@ -127,7 +136,10 @@ def find_cam_centers(frame_idxs, frame_poses):
     cam_centers = np.array(cam_centers).reshape((-1, 3))
     return cam_centers
 
-def create_ply_data(ply_data, visible_pts_idx):
+def create_ply_data(ply_data, visible_pts_idx=None):
+    if visible_pts_idx is None:
+        visible_pts_idx = np.arange(len(ply_data['vertex']['x']))
+            
     x = ply_data['vertex']['x'][visible_pts_idx]
     y = ply_data['vertex']['y'][visible_pts_idx]
     z = ply_data['vertex']['z'][visible_pts_idx]
@@ -156,30 +168,3 @@ def create_ply_data(ply_data, visible_pts_idx):
     vertices['RIO27'] = rio27_id.astype('u1')
 
     return vertices, object_id
-
-# def remove_ceiling(self, points):
-#         points_mask = points[..., 2] < np.max(points[..., 2]) - 1
-#         points = points[points_mask]
-#         return points
-    
-#     def create_vis(self):
-#         vis = o3d.visualization.Visualizer()
-#         vis.create_window(window_name='test', width=1280, height=840, left=0, top=0, visible=True)
-#         vis.get_render_option().light_on = False
-#         vis.get_render_option().line_width = 100.0
-
-#         ctr = vis.get_view_control()
-#         camera_param = ctr.convert_to_pinhole_camera_parameters()
-#         camera_param.extrinsic = np.array([[ 0.61093874,  0.79161489, -0.00998646,  0.07131896],
-#                                         [ 0.78591277, -0.60796109, -0.11280264,  0.56497598],
-#                                         [-0.09536763,  0.06106702, -0.99356723,  6.99977745],
-#                                         [ 0.        ,  0.        , 0.         , 1.        ]])
-#         ctr.convert_from_pinhole_camera_parameters(camera_param)
-#         return vis
-    
-#     def create_line_mesh_geoms(self, line_set, color):
-#         lines = np.asarray(line_set.lines).tolist()
-#         points = np.asarray(line_set.points)
-#         line_mesh = LineMesh(points, lines, color, radius=0.02)
-#         line_mesh_geoms = line_mesh.cylinder_segments
-#         return line_mesh_geoms

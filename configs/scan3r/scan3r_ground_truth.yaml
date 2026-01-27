@@ -8,9 +8,8 @@ scan_type     : 'subscan'
 
 data :
   name            : Scan3R
-  root_dir        : /drive/datasets/Scan3R
-  subscan_dir      : /drive/dumps/sgaligner/subscans/Scan3R
-  label_file_name : labels.instances.align.annotated.v2.ply
+  root_dir        : /media/sayan/internal1/datasets/Scan3R/
+  subscan_dir     : /drive/dumps/sgaligner/subscans/Scan3R
 
 preprocess :
   pc_resolutions      : [512]

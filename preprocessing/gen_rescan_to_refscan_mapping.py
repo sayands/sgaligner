@@ -1,6 +1,5 @@
 import os.path as osp
 import numpy as np 
-import random
 import argparse
 
 import sys

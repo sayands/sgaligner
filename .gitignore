@@ -6,3 +6,6 @@ plots/
 output/
 check.py
 test.py
+*egg-info/
+logs/
+build/

@@ -22,7 +22,8 @@ def gen_scan_subscan_mapping(mode, split):
     for scan_id in scan_ids:
         subscan_ids_per_scan_id = [subscan_id for subscan_id in subscan_ids if subscan_id.startswith(scan_id)]
         subscan_ids_per_scan_id = sorted(subscan_ids_per_scan_id)
-        if len(subscan_ids_per_scan_id) == 0: continue
+        if len(subscan_ids_per_scan_id) == 0: 
+            continue
         scan_subscan_map[scan_id] = subscan_ids_per_scan_id
 
     print('[INFO] Proccessed {} 3RScan {} scans.'.format(len(scan_ids), split))

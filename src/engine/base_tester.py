@@ -76,4 +76,4 @@ class BaseTester(abc.ABC):
 
     @abc.abstractmethod
     def run(self):
-        raise NotImplemented
+        raise NotImplementedError

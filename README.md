@@ -20,9 +20,8 @@ SGAligner aligns 3D scene graphs of environments using multi-modal learning and 
 
 ## News :newspaper:
 
-- ![](https://img.shields.io/badge/New!-8A2BE2) [2025-04] Codebase updated + Ground truth checkpoints released. 
 - [2023-07] SGAligner accepted to **ICCV 2023**. :fire:
-- [2023-05] We release SGAligner on arXiv with codebase with pre-trained predicted relationship checkpoint. Checkout our [paper](https://arxiv.org/abs/2304.14880v1) and [website](https://sayands.github.io/sgaligner/).
+- [2023-05] We release SGAligner on arXiv with codebase + GT checkpoints. Checkout our [paper](https://arxiv.org/abs/2304.14880v1) and [website](https://sayands.github.io/sgaligner/).
 
 ## Code Structure :clapper:
 
@@ -37,7 +36,7 @@ sgaligner/
 │   │── engine                    <- trainer classes
 │   │── GeoTransformer            <- geotransformer submodule for registration
 │   │── inference                 <- inference files for alignment + downstream applications
-│   │── trainers                  <- train + validation loop (EVA + SGAligner)
+│   │── trainers                  <- train + validation loop (SGAligner)
 │── utils                         <- util functions
 │── README.md                    
 │── scripts                       <- bash scripts for data generation + preprocesing + training
@@ -48,18 +47,34 @@ sgaligner/
 
 The main dependencies of the project are the following:
 ```yaml
-python: 3.8.15
-cuda: 11.6
+python: >=3.11
+cuda: >=12.8
 ```
-You can set up a conda environment as follows :
+
+#### Installation
+
+You can set up the environment as follows:
 ```bash
 git clone --recurse-submodules -j8 git@github.com:sayands/sgaligner.git
 cd sgaligner
-conda env create -f req.yml
-```
-> Note: Please follow [PointCloudTransformer](https://github.com/qinglew/PointCloudTransformer) repository for installing pointnet2_ops_lib if you want to use PCT as the backbone.
 
-Please follow the submodule for additional installation requirements and setup of [GeoTransformer](https://github.com/sayands/GeoTransformer).
+conda create -n sgaligner python=3.11
+conda activate sgaligner
+
+# Install torch
+pip install torch==2.7.1 torchvision==0.22.1 torchaudio==2.7.1 --index-url https://download.pytorch.org/whl/cu128
+
+# Re-install numpy and opencv (to handle version issues)
+pip install numpy==1.26.4 opencv-python==4.11.0.86 
+
+# Install PointNet2 library
+pip install --no-build-isolation third_party/pointnet2_ops_lib/.
+pip install -e .
+
+# Install GeoTransformer
+cd src/GeoTransformer
+pip install -v -e . --no-build-isolation
+```
 
 ### Downloads :droplet:
 The pre-trained model and other meta files are available [here](https://drive.google.com/drive/folders/10-JNxWLxPFQ2q6_zY-9HXIO-Qx-vhmmT?usp=sharing).
@@ -89,12 +104,18 @@ Scan3R/
 |    ├── objects.json
 |    ├── relationships.json
 |    └── obj_attr.pkl
-└── scans       <- scans
+└── scans       <- scan data directories (one per scan)
+     └── <scan_id>/
+          ├── labels.instances.annotated.v2.ply
+          ├── mesh.refined.0.010000.segs.v2.json
+          ├── mesh.refined.mtl
+          ├── mesh.refined.v2.obj
+          ├── mesh.refined_0.png
+          ├── semseg.v2.json
+          └── sequence/  <- directory containing sequence data (color, pose, intrinsics)
 ```
 
-2. Generate ``labels.instances.align.annotated.v2.ply`` for each 3RScan scan, please refer to the repo from [here](https://github.com/ShunChengWu/3DSSG/blob/master/data_processing/transform_ply.py).
-
-3. Change the absolute paths in ``utils/define.py`` and paths in the config files under `configs/scan3r/`.
+2. Change the absolute paths in ``utils/define.py`` and paths in the config files under `configs/scan3r/`.
 
 #### Subscan Pair Generation - 3RScan + 3DSSG
 First, we create sub-scans from each 3RScan scan using the ground truth scene Graphs from the 3DSSG dataset and then calculate the pairwise overlap ratio for the subscans in a scan. Finally, we preprocess the data for our framework. The relevant code can be found in the ``data-preprocessing/`` directory. You can use the following command to generate the subscans.
@@ -120,15 +141,6 @@ cd src
 python trainers/trainval_sgaligner.py --config ../configs/scan3r/scan3r_ground_truth.yaml
 ```
 
-#### EVA Training
-We also provide training scripts for [EVA](https://arxiv.org/abs/2009.13603), used as a baseline after being adapted for scene graph alignment. To train EVA similar to SGAligner on the same data, you can use :
-
-```bash
-cd src
-python trainers/trainval_eva.py --config ../configs/scan3r/scan3r_eva.yaml
-```
-
-
 We provide config files for the corresponding data in ``config/`` directory. Please change the parameters in the configuration files, if you want to tune the hyper-parameters.
 
 ### Evaluation :vertical_traffic_light:
@@ -153,7 +165,7 @@ python inference/sgaligner/inference_find_overlapper.py --config ../configs/scan
 First, we generate the subscans per 3RScan scan using : 
 
 ```bash
-python data-preprocessing/gen_scan_subscan_mapping.py --split <the split you want to generate the mapping for>
+python preprocessing/gen_scan_subscan_mapping.py --split <the split you want to generate the mapping for>
 ```
 
 And then, to run the inference, you need to:

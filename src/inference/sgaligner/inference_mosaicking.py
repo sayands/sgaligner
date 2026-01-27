@@ -4,26 +4,22 @@ import os.path as osp
 from tqdm import tqdm
 import numpy as np
 
-import sys
-parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(parent_dir)
-sys.path.append('.')
-
 from engine.single_tester import SingleTester
 from engine.registration_evaluator import RegistrationEvaluator
 from utils import torch_util
 from aligner.sg_aligner import *
 from datasets.loaders import get_val_dataloader
 from configs import config, update_config
-from utils import common, define, scan3r, alignment, open3d, registration
+from utils import common, scan3r, alignment, open3d, registration
 
-def load_subscan_pair(src_scan_id, ref_scan_id, mode='orig', pc_res=512):
+
+def load_subscan_pair(subscan_dir, src_scan_id, ref_scan_id, mode='orig', pc_res=512):
     # Centering
-    src_points = scan3r.load_plydata_npy(osp.join(define.SCAN3R_SUBSCENES_DIR, 'scenes/{}/data.npy'.format(src_scan_id)), obj_ids = None)
+    src_points = scan3r.load_plydata_npy(osp.join(subscan_dir, 'scans/{}/data.npy'.format(src_scan_id)), obj_ids = None)
     pcl_center = np.mean(src_points, axis=0)
 
-    src_data = common.load_pkl_data(osp.join(define.SCAN3R_SUBSCENES_DIR, 'files/{}/data/{}.pkl'.format(mode, src_scan_id)))
-    ref_data = common.load_pkl_data(osp.join(define.SCAN3R_SUBSCENES_DIR, 'files/{}/data/{}.pkl'.format(mode, ref_scan_id)))
+    src_data = common.load_pkl_data(osp.join(subscan_dir, 'files/{}/data/{}.pkl'.format(mode, src_scan_id)))
+    ref_data = common.load_pkl_data(osp.join(subscan_dir, 'files/{}/data/{}.pkl'.format(mode, ref_scan_id)))
     
     src_objects_ids = src_data['objects_id']
     ref_objects_ids = ref_data['objects_id']
@@ -70,6 +66,7 @@ class MosaickTester(SingleTester):
         super().__init__(cfg, parser=parser)
 
         self.run_reg = cfg.registration
+        self.split = self.args.split
 
         # Model Specific params
         self.modules = cfg.modules
@@ -84,21 +81,24 @@ class MosaickTester(SingleTester):
         # model 
         model = self.create_model()
         self.register_model(model)
+        
+        # Load snapshot
+        self.load_snapshot(self.args.snapshot)
         self.model.eval()
 
         # Paths 
-        self.scans_dir = osp.join(cfg.data_dir)
+        self.scans_dir = osp.join(cfg.data.root_dir)
         self.scans_files_dir = osp.join(self.scans_dir, 'files')
         self.scans_scenes_dir = osp.join(self.scans_dir, 'scans')
 
-        self.subscans_dir = osp.join(self.scans_dir, 'out')
+        self.subscans_dir = osp.join(cfg.data.subscan_dir)
         self.subscans_files_dir = osp.join(self.subscans_dir, 'files')
         self.subscans_scenes_dir = osp.join(self.subscans_dir, 'scans')
 
         # Data - load scan-subscan mapping
         self.data_mode = cfg.val.data_mode
-        self.scan_subscan_map = common.load_json(osp.join(self.subscans_files_dir,  self.data_mode, cfg.data.anchor_type_name + '_{}.json'.format(cfg.split)))
-        self.scan_subscan_map = {k: self.scan_subscan_map[k] for k in list(self.scan_subscan_map)[:2]}
+        self.scan_subscan_map = common.load_json(osp.join(self.subscans_files_dir,  self.data_mode, cfg.preprocess.anchor_type_name + '_{}.json'.format(self.split)))
+        self.scan_subscan_map = {k: self.scan_subscan_map[k] for k in list(self.scan_subscan_map)}
 
         reg_snapshot = self.args.reg_snapshot
         self.registration_evaluator = RegistrationEvaluator(self.device, cfg, reg_snapshot, self.logger)
@@ -106,7 +106,7 @@ class MosaickTester(SingleTester):
     def create_model(self):
         model = MultiModalEncoder(modules = self.modules, rel_dim = self.rel_dim, attr_dim=self.attr_dim).to(self.device)
         message = 'Model created'
-        self.logger.info(message)
+        self.logger.info(message)        
         return model
     
     def test_step(self, iteration, data_dict):
@@ -148,13 +148,18 @@ class MosaickTester(SingleTester):
         return alignment_score, data_dict
 
     def eval(self):
+        # Before eval start
+        self.model.eval()
+        torch.set_grad_enabled(False)
+        
         total_iterations = len(self.scan_subscan_map)
         pbar = tqdm(enumerate(self.scan_subscan_map), total=total_iterations)     
 
         for iteration, scan_id in pbar:
             subscan_ids = self.scan_subscan_map[scan_id]
 
-            if len(subscan_ids) == 0: continue
+            if len(subscan_ids) == 0: 
+                continue
             
             origin_subscan_id = subscan_ids[0]
 
@@ -166,7 +171,7 @@ class MosaickTester(SingleTester):
             gt_scan_pcd = open3d.make_open3d_point_cloud(origin_subscan_points)
 
             for src_subscan_id in subscan_ids[1:]:
-                data_dict = load_subscan_pair(src_subscan_id, origin_subscan_id)
+                data_dict = load_subscan_pair(self.subscans_dir, src_subscan_id, origin_subscan_id)
                 alignment_score, data_dict = self.run_pairwise_alignment(data_dict)
 
                 src_points, src_plydata = scan3r.load_plydata_npy(osp.join(self.subscans_scenes_dir, src_subscan_id, 'data.npy'), obj_ids=None, return_ply_data=True)
@@ -185,11 +190,13 @@ class MosaickTester(SingleTester):
                 est_transform_aligner = self.registration_evaluator.run_aligner_registration(reg_data_dict, evaluate_registration=False)
                 registration_res = self.registration_evaluator.run_normal_registration(reg_data_dict, evaluate_registration=False)
 
-                if registration_res is None: continue
+                if registration_res is None: 
+                    continue
 
                 est_transform_registration_method = registration_res[0]
 
-                if est_transform_aligner is None or est_transform_registration_method is None: continue
+                if est_transform_aligner is None or est_transform_registration_method is None: 
+                    continue
 
                 src_pcd_transformed_aligner = open3d.make_open3d_point_cloud(registration.apply_transform(src_points, est_transform_aligner))
                 src_pcd_transformed_registration_method = open3d.make_open3d_point_cloud(registration.apply_transform(src_points, est_transform_registration_method))
@@ -217,6 +224,7 @@ def parse_args(parser=None):
     parser.add_argument('--test_epoch', type=int, default=None, help='test epoch')
     parser.add_argument('--test_iter', type=int, default=None, help='test iteration')
     parser.add_argument('--reg_snapshot', default=None, help='load from snapshot')
+    parser.add_argument('--split', dest='split', default='val', type=str, help='data split to test on')
 
     args = parser.parse_args()
     return parser, args

@@ -35,7 +35,8 @@ def gen_fileset(subscans_files_dir, split, mode='orig'):
             if not found_flag:
                 anchor_data.append({'src' : src_scan_id, 'ref' : tgt_scan_id, 'overlap' : 0.0, 'anchorIds' : []})
                 count += 1
-        else: break
+        else: 
+            break
     
     anchor_data = np.concatenate([overlap_data_dumped, anchor_data])
     anchor_data = list(anchor_data)

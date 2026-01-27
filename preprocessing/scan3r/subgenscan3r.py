@@ -8,7 +8,7 @@ import itertools
 import open3d as o3d
 from torch.utils.data import Dataset
 
-from utils import common, point_cloud, scan3r, open3d, visualisation
+from utils import define, common, point_cloud, scan3r, open3d, visualisation
 from utils.logger import Logger
 
 class SubGenScan3R(Dataset):
@@ -44,9 +44,11 @@ class SubGenScan3R(Dataset):
         self.obj_pt_scene_thresh = cfg.preprocess.min_obj_points
         self.logger.info('[INFO] Loaded {} {} scan data...'.format(self.__len__(), self.split))
         
-        self.label_file_name = 'labels.instances.align.annotated.v2.ply'
+        self.label_file_name = define.LABEL_FILE_NAME_RAW
         self.save_name = 'data.npy'
         self.skip = None
+        
+        self.rescan2ref = scan3r.read_transform_mat(osp.join(self.file_dir, '3RScan.json'))
 
     def gen_scene_graph(self, scan_id, idx, ply_data, visible_pts_mask):
         obj_json_scan = [scan_obj for scan_obj in self.scan_objs if scan_obj['scan'] == scan_id][0]['objects']
@@ -170,7 +172,17 @@ class SubGenScan3R(Dataset):
         frame_poses = scan3r.load_all_poses(self.scene_dir, scan_id, frame_idxs)
 
         # Load scene pcl
-        ply_data = scan3r.load_ply_data(self.scene_dir, scan_id, self.label_file_name)
+        if scan_id in self.rescan2ref:
+            matrix = self.rescan2ref[scan_id]
+        else:
+            matrix = None
+        
+        ply_data = scan3r.load_ply_data(self.scene_dir, scan_id, self.label_file_name, matrix=matrix)
+        
+        # Save data.npy
+        ply_data_to_save, _ = scan3r.create_ply_data(ply_data)
+        np.save(osp.join(self.scene_dir, scan_id, 'data.npy'), ply_data_to_save)
+        
         scene_pts = np.stack((ply_data['vertex']['x'], ply_data['vertex']['y'], ply_data['vertex']['z'])).transpose()
         if scene_pts.shape[0] == 0: 
             return
@@ -206,11 +218,6 @@ class SubGenScan3R(Dataset):
             # if maxPtsPerSubscene reached, add to subscene list and re-start from next frame ID
             if subscan_pts.shape[0] >= max_pts_subscan:
                 if visualise:
-                    # TODO - add subscene visualisation
-                    # subscan_pcd = open3d.make_open3d_point_cloud(subscan_pts)
-                    # subscan_pcd.paint_uniform_color(visualisation.get_random_color() / 255.)
-                    # open3d.draw_geometries(subscan_pcd)
-
                     ''' Camera trajectory visualisation '''
                     end_idx = frame_cnt
                     cam_centers_subscan = cam_centers[start_idx : end_idx]
