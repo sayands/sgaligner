@@ -131,8 +131,8 @@ def get_visible_pts_from_cam_pose(scene_pts, cam_2_world_pose, intrinsic_info):
     out = out.reshape(-1, 2)
 
     # Check if pts within frame and if depth > 0
-    out_x_mask = (out[..., 0] >= 0) & (out[..., 0] <= intrinsic_info['height'])
-    out_y_mask = (out[..., 1] >= 0) & (out[..., 1] <= intrinsic_info['width'])
+    out_x_mask = (out[..., 0] >= 0) & (out[..., 0] <= intrinsic_info['width'])
+    out_y_mask = (out[..., 1] >= 0) & (out[..., 1] <= intrinsic_info['height'])
     depth_mask = cam_pts_3d[..., 2] > 0.0
     visible_mask = np.logical_and(depth_mask, np.logical_and(out_x_mask, out_y_mask))
     return visible_mask
@@ -204,7 +204,7 @@ def sample_faces(vertices, faces, n_samples=10**4):
     sample_face_idx[acc: acc + _n_sample] = face_idx
     acc += _n_sample
 
-  r = np.random.rand(n_samples, 2);
+  r = np.random.rand(n_samples, 2)
   A = vertices[faces[sample_face_idx, 0], :]
   B = vertices[faces[sample_face_idx, 1], :]
   C = vertices[faces[sample_face_idx, 2], :]

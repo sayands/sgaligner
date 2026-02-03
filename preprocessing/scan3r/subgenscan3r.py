@@ -207,6 +207,8 @@ class SubGenScan3R(Dataset):
         # Loop through all frames
         while frame_cnt < len(frame_idxs):
             frame_pose = frame_poses[frame_cnt]
+            if matrix is not None:
+                frame_pose = matrix.T @ frame_pose
 
             # get the points from scene PLY visible in current frame
             frame_visible_mask = point_cloud.get_visible_pts_from_cam_pose(scene_pts, frame_pose, intrinsic_info)

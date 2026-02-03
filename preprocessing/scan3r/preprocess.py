@@ -294,15 +294,13 @@ def calculate_bow_node_edge_feats(data_write_dir, rel2idx):
         data_dict_filename = osp.join(data_write_dir, 'data', '{}.pkl'.format(scan_id))
         data_dict = common.load_pkl_data(data_dict_filename)
         
-        edge = data_dict['edges']
         objects_ids = data_dict['objects_id']
         triples = data_dict['triples']
-        edges = data_dict['edges']
+        object_id2idx = data_dict['object_id2idx']
 
         entities_edge_names = [None] * len(objects_ids)
-        for idx in range(len(edges)):
-            edge = edges[idx]
-            entity_idx = edge[0]
+        for idx in range(len(triples)):
+            entity_idx = object_id2idx[triples[idx][0]]
             rel_name = idx_2_rel[triples[idx][2]]
 
             if rel_name == 'inside':
